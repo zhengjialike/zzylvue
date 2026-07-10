@@ -33,7 +33,10 @@ const routes = [
         name: 'ModifyPwd',
         component: ModifyPwd
       },
-      {path:'/NursingItem',component:()=>import('@/views/NursingItem.vue')}
+      {path:'/NursingItem',component:()=>import('@/views/NursingItem.vue')},
+      {path:'/NursingPlain',component:()=>import('@/views/NursingPlain.vue')},
+      {path:'/Appointment',component:()=>import('@/views/Appointment.vue')},
+      {path:'/VisitRecord',component:()=>import('@/views/VisitRecord.vue')}
     ]
   }
 ]
