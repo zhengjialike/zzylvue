@@ -68,7 +68,7 @@
       <el-form-item style="margin-left: 40%">
         <template #default="scope">
           <el-button type="primary" round @click="saveNursingPlain">确认</el-button>
-          <el-button type="warning" round @click="saveUserInfo">取消</el-button>
+          <el-button type="warning" round @click="closeNursingPlain">取消</el-button>
         </template>
       </el-form-item>
     </el-form>
@@ -108,14 +108,14 @@
                    @click="delNursingItem(scope.row.id)"
                    :disabled="scope.row.flag==1?true:false">删除</el-button>
         <el-button type="primary" size="small"
-                   @click="showNursingInfo(scope.row)"
+                   @click="showNursingPlainInfo(scope.row)"
                    :disabled="scope.row.flag==1?true:false">编辑</el-button>
         <el-button type="success" size="small"
                    @click="updateIsLock(scope.row)"
                    :disabled="scope.row.flag==1?true:false">
           {{scope.row.islock=="启用"?"禁用":"启用"}}
         </el-button>
-        <el-button>
+        <el-button @click="showNursingPlain(scope.row)">
           查看
         </el-button>
       </template>
@@ -130,6 +130,31 @@
       background
       layout="prev, pager, next"
       :total="total" @change="loadNursingPlainPageList"/>
+
+<!-- //////////////////////查看护理计划和护理项对话框/////////////////////// -->
+  <!--  添加对话框组件，实现护理项目的新增  -->
+  <el-dialog
+      v-model="showPlainDialogVisible"
+      title="护理计划信息"
+      width="60%">
+
+        <div style="text-align: left;font-size: 18px">
+          护理计划名称:
+          {{showPlainForm.plainname}}
+        </div>
+
+        <el-table
+            :data="showPlainForm.itemList"
+            style="width: 100%" :fit="true">
+          <el-table-column prop="itemname"  label="护理项名称"/>
+          <el-table-column prop="hlsj" label="服务时间"/>
+          <el-table-column prop="hlzq" label="执行周期"/>
+          <el-table-column prop="hlpc" label="执行频次"/>
+
+        </el-table>
+
+
+  </el-dialog>
 </template>
 
 <script setup>
@@ -138,11 +163,15 @@ import {onMounted, reactive, ref} from "vue";
  import axios from "axios";
  //声明新增护理计划对话框状态
  const nursingPlainDialogVisible=ref(false);
+ //声明变量保存处理新增和更新护理计划接口地址
+ var url=null;
  //声明函数打开新增护理计划对话框
  function openNursingPlainDialog(){
    nursingPlainDialogVisible.value=true;
+   url="saveNursingPlain";
    //调用函数加载护理项
    laodNursingItemPageList(1);
+
  }
  //声明护理项目列表集合数据
  const nursingItemList=ref([]);
@@ -208,7 +237,7 @@ import {onMounted, reactive, ref} from "vue";
   //定义函数发生请求，保存护理计划
   function saveNursingPlain(){
     nursingPlainForm.plainItemList=plainItemList;
-    axios.post("/saveNursingPlain",nursingPlainForm)
+    axios.post(url,nursingPlainForm)
     .then(response=>{
       if(response.data.code==200){
         //刷新列表
@@ -253,11 +282,48 @@ import {onMounted, reactive, ref} from "vue";
   function cleanNursingPlainForm(){
     nursingPlainForm.id='';
     nursingPlainForm.plainitem='';
-    nursingPlainForm.plainitem.hlmc=[];
-    nursingPlainForm.plainitem.hlsj=[];
-    nursingPlainForm.plainitem.hlpc=[];
-    nursingPlainForm.plainitem.hlzq=[];
+    // nursingPlainForm.plainitem.hlmc=[];
+    // nursingPlainForm.plainitem.hlsj=[];
+    // nursingPlainForm.plainitem.hlpc=[];
+    // nursingPlainForm.plainitem.hlzq=[];
+    nursingItemList.value=[];
 
+  }
+  //声明showPlainDialogVisible表示查看护理计划对回框
+  const showPlainDialogVisible=ref(false);
+  //声明对象保存需要查看的护理计划和护理项信息
+  const showPlainForm=reactive({
+    plainname:'',
+    itemList:[]
+  });
+  //定义函数打开查看护理计划对话框
+  function showNursingPlain(row){
+    showPlainDialogVisible.value=true;
+    var plainid=row.id;
+    var plainname=row.plainname;
+    showPlainForm.plainname=plainname;
+    axios.get("/queryPlainItem?plainid="+plainid)
+    .then(response=>{
+      showPlainForm.itemList=response.data;
+    })
+    .catch(error=>{
+      console.log(error);
+    })
+  }
+  ///////////////定义函数打开护理计划回显对话框//////////////////
+  function showNursingPlainInfo(row){
+    nursingPlainForm.id=row.id;
+    nursingPlainForm.plainname=row.plainname;
+    url="updateNursingPlain";
+    laodNursingItemPageList(1);
+    //修改对话框状态
+    nursingPlainDialogVisible.value=true;
+  }
+  //定义函数取消新增或者更新，关闭对话框
+  function closeNursingPlain(){
+    //修改对话框状态
+    nursingPlainDialogVisible.value=false;
+    cleanNursingPlainForm();
   }
 </script>
 
