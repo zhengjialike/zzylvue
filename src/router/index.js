@@ -35,8 +35,10 @@ const routes = [
       },
       {path:'/NursingItem',component:()=>import('@/views/NursingItem.vue')},
       {path:'/NursingPlain',component:()=>import('@/views/NursingPlain.vue')},
+      {path:'/NursingLevel',component:()=>import('@/views/NursingLevel.vue')},
       {path:'/Appointment',component:()=>import('@/views/Appointment.vue')},
-      {path:'/VisitRecord',component:()=>import('@/views/VisitRecord.vue')}
+      {path:'/VisitRecord',component:()=>import('@/views/VisitRecord.vue')},
+      {path:'/Customer',component:()=>import('@/views/Customer.vue')}
     ]
   }
 ]
