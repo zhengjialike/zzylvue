@@ -38,7 +38,12 @@ const routes = [
       {path:'/NursingLevel',component:()=>import('@/views/NursingLevel.vue')},
       {path:'/Appointment',component:()=>import('@/views/Appointment.vue')},
       {path:'/VisitRecord',component:()=>import('@/views/VisitRecord.vue')},
-      {path:'/Customer',component:()=>import('@/views/Customer.vue')}
+      {path:'/Customer',component:()=>import('@/views/Customer.vue')},
+      {path:'/RoomType',component:()=>import('@/views/RoomType.vue')},
+      {path:'/FloorBed',component:()=>import('@/views/FloorBed.vue')},
+      {path:'/DeviceManagement',component:()=>import('@/views/DeviceManagement.vue')},
+      {path:'/AlertRule',component:()=>import('@/views/AlertRule.vue')},
+      {path:'/AlertRecord',component:()=>import('@/views/AlertRecord.vue')}
     ]
   }
 ]
