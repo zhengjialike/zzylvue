@@ -16,15 +16,15 @@
     </el-form-item>
 
     <el-form-item label="部门">
-      {{ userInfo.department }}
+      {{ userInfo.deptName }}
     </el-form-item>
 
     <el-form-item label="职位">
-      {{ userInfo.job }}
+      {{ userInfo.positionName }}
     </el-form-item>
 
     <el-form-item label="角色">
-      {{ userInfo.role }}
+      {{ userInfo.roleName || '未设置' }}
     </el-form-item>
 
     <el-form-item label="手机">
@@ -66,15 +66,15 @@ import { ElMessage } from "element-plus";
 
 // 声明用户信息表单对象（字段与后端 UserLineDto 对应）
 const userInfo = reactive({
-  id: '',          // 用于更新时定位记录
-  uname: '',       // 对应后端 realname
+  id: '',
+  uname: '',
   email: '',
-  department: '',
-  job: '',
-  role: '',
+  deptName: '',        // 修改：department → deptName
+  positionName: '',    // 修改：job → positionName
+  roleName: '',        // 修改：role → roleName
   phone: '',
   sex: '',
-  image: ''        // 头像URL
+  image: ''
 });
 
 // 声明响应式数据保存头像上传后的路径（用于预览）
@@ -85,15 +85,17 @@ function loadShowInfo() {
   axios.get("/showInfo")
     .then(response => {
       const obj = response.data;
+      if (!obj) return;
+
       userInfo.id = obj.id;
-      userInfo.uname = obj.realname;      // 后端返回字段为 realname，映射到 uname
+      userInfo.uname = obj.uname;          // 修改：realname → uname
       userInfo.email = obj.email;
-      userInfo.department = obj.department;
-      userInfo.job = obj.job;
-      userInfo.role = obj.role;
+      userInfo.deptName = obj.deptName;    // 修改：department → deptName
+      userInfo.positionName = obj.positionName; // 修改：job → positionName
+      userInfo.roleName = obj.roleName || '';   // 修改：role → roleName
       userInfo.phone = obj.phone;
       userInfo.sex = obj.sex;
-      imageUrl.value = obj.image;         // 若后端返回头像字段
+      imageUrl.value = obj.image;
     })
     .catch(error => {
       console.log(error);

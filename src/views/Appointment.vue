@@ -209,8 +209,8 @@
 
       <!-- 参观预约标签页 -->
       <el-tab-pane label="参观预约" name="visit">
-        <!-- 复用上面的表格和分页组件，数据通过 activeTab 过滤 -->
-        <el-table :data="filteredTableData" stripe border style="width: 100%" v-loading="loading">
+        <!-- 使用 tableData，数据由后端过滤 -->
+        <el-table :data="tableData" stripe style="width: 100%" v-loading="loading">
           <el-table-column type="index" label="序号" width="60" align="center" />
           <el-table-column prop="appointmentType" label="预约类型" width="120" align="center" />
           <el-table-column prop="visitorName" label="预约人姓名" width="120" align="center" />
@@ -263,8 +263,8 @@
 
       <!-- 探访预约标签页 -->
       <el-tab-pane label="探访预约" name="explore">
-        <!-- 复用上面的表格和分页组件 -->
-        <el-table :data="filteredTableData" stripe border style="width: 100%" v-loading="loading">
+        <!-- 使用 tableData，数据由后端过滤 -->
+        <el-table :data="tableData" stripe style="width: 100%" v-loading="loading">
           <el-table-column type="index" label="序号" width="60" align="center" />
           <el-table-column prop="appointmentType" label="预约类型" width="120" align="center" />
           <el-table-column prop="visitorName" label="预约人姓名" width="120" align="center" />
@@ -359,7 +359,7 @@
 
 <script setup>
 // ==================== 导入依赖 ====================
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
@@ -425,32 +425,12 @@ const arrivalForm = reactive({
   arrivalTime: ''       // 实际到院时间
 })
 
-// ==================== 计算属性 ====================
-
-/**
- * 根据当前激活的标签页过滤表格数据
- * 返回：过滤后的预约记录数组
- */
-const filteredTableData = computed(() => {
-  if (activeTab.value === 'all') {
-    // 显示全部数据
-    return tableData.value
-  } else if (activeTab.value === 'visit') {
-    // 只显示参观预约
-    return tableData.value.filter(item => item.appointmentType === '参观预约')
-  } else if (activeTab.value === 'explore') {
-    // 只显示探访预约
-    return tableData.value.filter(item => item.appointmentType === '探访预约')
-  }
-  return tableData.value
-})
-
 // ==================== 方法定义 ====================
 
 /**
  * 加载预约列表数据
  * 功能：向后端发送请求获取预约记录列表
- * 参数：无（使用 searchForm 和 pagination 中的数据）
+ * 参数：无（使用 searchForm、pagination 和 activeTab 中的数据）
  */
 function loadAppointmentList() {
   // 开启加载动画
@@ -463,21 +443,35 @@ function loadAppointmentList() {
     pageSize: pagination.pageSize     // 每页条数
   }
 
+  // 根据标签页设置预约类型
+  if (activeTab.value === 'visit') {
+    params.appointmentType = '参观预约'
+  } else if (activeTab.value === 'explore') {
+    params.appointmentType = '探访预约'
+  }
+  // activeTab.value === 'all' 时不传 appointmentType，查询全部
+
   // 如果选择了日期范围，添加时间参数
   if (dateRange.value && dateRange.value.length === 2) {
     params.startTime = dateRange.value[0]   // 开始时间
     params.endTime = dateRange.value[1]     // 结束时间
   }
 
+  console.log('=== 发送预约查询请求 ===')
+  console.log('当前标签页:', activeTab.value)
+  console.log('请求参数:', params)
+
   // 发送POST请求到后端接口
   axios.post('/appointment/list', params)
     .then(response => {
       // 请求成功回调
+      console.log('响应数据:', response.data)
       if (response.data.code === 200) {
         // 更新表格数据
         tableData.value = response.data.data || []
         // 更新总记录数
         pagination.total = response.data.total || 0
+        console.log('更新后的 total:', pagination.total)
       } else {
         // 显示错误提示
         ElMessage.error(response.data.msg || '查询失败')
@@ -524,12 +518,14 @@ function handleReset() {
 
 /**
  * 标签页切换事件处理
- * 功能：切换不同的预约类型标签页
+ * 功能：切换不同的预约类型标签页，并重新加载数据
  * 参数：tabName - 标签页名称（all/visit/explore）
  */
 function handleTabChange(tabName) {
-  // 这里可以根据需要添加额外的逻辑
-  // 目前只是切换显示，数据已经在 filteredTableData 中过滤
+  // 重置到第一页
+  pagination.pageNum = 1
+  // 重新加载数据（会带上新的 appointmentType 参数）
+  loadAppointmentList()
   console.log('切换到标签页:', tabName)
 }
 
