@@ -1,4 +1,5 @@
 <template>
+  <!-- 退住七步流程详情页：账单审批与退住审批是原型中的两个独立审批节点。 -->
   <div class="check-out-detail">
     <!-- 顶部步骤条 -->
     <el-card class="steps-card" shadow="never">
@@ -8,6 +9,7 @@
         <el-step title="解除合同" />
         <el-step title="调整账单" />
         <el-step title="账单审批" />
+        <el-step title="退住审批" />
         <el-step title="费用清算" />
       </el-steps>
     </el-card>
@@ -35,7 +37,12 @@
           <template #header><span class="card-title">申请信息</span></template>
           <el-descriptions :column="1" border size="small">
             <el-descriptions-item label="老人姓名">{{ form.elderName }}</el-descriptions-item>
-            <el-descriptions-item label="身份证号">{{ form.idCard }}</el-descriptions-item>
+              <el-descriptions-item label="身份证号">{{ form.idCard }}</el-descriptions-item>
+              <el-descriptions-item label="联系方式">{{ form.phone }}</el-descriptions-item>
+              <el-descriptions-item label="费用期限">{{ form.billStartDate }} ~ {{ form.billEndDate }}</el-descriptions-item>
+              <el-descriptions-item label="护理等级">{{ form.nursingLevel }}</el-descriptions-item>
+              <el-descriptions-item label="入住床位">{{ form.bedNo }}</el-descriptions-item>
+              <el-descriptions-item label="养老顾问">{{ form.advisor }}</el-descriptions-item>
             <el-descriptions-item label="退住日期">{{ form.checkOutDate }}</el-descriptions-item>
             <el-descriptions-item label="退住原因">{{ form.reason }}</el-descriptions-item>
             <el-descriptions-item label="退住备注">{{ form.remark }}</el-descriptions-item>
@@ -229,8 +236,8 @@
             </el-form>
           </div>
 
-          <!-- 步骤5 账单审批 -->
-          <div v-else-if="currentStep === 5">
+          <!-- 步骤5账单审批、步骤6退住审批使用相同表单，但在后端是两个独立节点。 -->
+          <div v-else-if="currentStep === 5 || currentStep === 6">
             <el-form :model="form" label-width="100px">
               <el-form-item label="审批结果">
                 <el-radio-group v-model="form.approveResult">
@@ -244,8 +251,8 @@
             </el-form>
           </div>
 
-          <!-- 步骤6 费用清算 -->
-          <div v-else-if="currentStep === 6">
+          <!-- 步骤7 费用清算 -->
+          <div v-else-if="currentStep === 7">
             <el-descriptions :column="1" border size="small" title="账单明细">
               <el-descriptions-item label="应退小计">{{ form.shouldRefundTotal }}</el-descriptions-item>
               <el-descriptions-item label="欠费小计">{{ form.arrearsTotal }}</el-descriptions-item>
@@ -329,7 +336,7 @@
         <el-button type="primary" @click="loadEligibleElders">查询</el-button>
       </div>
       <el-table :data="eligibleElders" v-loading="elderLoading" max-height="360px">
-        <el-table-column prop="name" label="老人姓名" width="120" />
+        <el-table-column prop="realName" label="老人姓名" width="120" />
         <el-table-column prop="idCard" label="身份证号" min-width="190" />
         <el-table-column prop="phone" label="联系方式" width="130" />
         <el-table-column label="操作" width="90">
@@ -341,10 +348,10 @@
     </el-dialog>
 
     <!-- 底部按钮区 -->
-    <div class="footer-bar" v-if="currentStep <= 6 && !['已关闭', '已完成'].includes(form.flowStatus)">
+    <div class="footer-bar" v-if="currentStep <= 7 && !['已关闭', '已完成'].includes(form.flowStatus)">
       <el-button @click="onBack">返回</el-button>
       <el-popconfirm
-        v-if="currentStep === 2 && id"
+        v-if="currentStep <= 6 && id"
         title="确认撤销该退住申请？"
         @confirm="onRevoke"
       >
@@ -374,11 +381,14 @@ const currentStep = ref(1)
 const stepTitle = ref('申请退住')
 const depositMax = ref(0)
 const logs = ref([])
+// 防重复提交状态，所有步骤共用同一把提交锁。
 const submitting = ref(false)
+// “选择在住老人”弹窗相关状态。
 const elderDialogVisible = ref(false)
 const elderLoading = ref(false)
 const elderKeyword = ref('')
 const eligibleElders = ref([])
+// “选择需要解除的合同”弹窗相关状态。
 const contractDialogVisible = ref(false)
 const contractLoading = ref(false)
 const activeContracts = ref([])
@@ -388,6 +398,7 @@ const form = reactive({
   elderId: null,
   elderName: '',
   idCard: '',
+  phone: '',
   checkOutDate: new Date().toISOString().slice(0, 10),
   reason: '',
   remark: '',
@@ -410,6 +421,11 @@ const form = reactive({
   balanceTotal: 0,
   settleStatus: '',
   flowStatus: '',
+  nursingLevel: '',
+  bedNo: '',
+  advisor: '',
+  billStartDate: '',
+  billEndDate: '',
   bills: {
     shouldRefund: [],
     shouldRefundFee: [],
@@ -429,12 +445,13 @@ const stepTitles = {
   3: '解除合同',
   4: '调整账单',
   5: '账单审批',
-  6: '费用清算'
+  6: '退住审批',
+  7: '费用清算'
 }
 
 const submitBtnText = computed(() => {
   if (currentStep.value === 1) return '提交申请'
-  if (currentStep.value === 6) return '确认清算'
+  if (currentStep.value === 7) return '确认清算'
   return '提交'
 })
 
@@ -460,11 +477,13 @@ function requireFields(fields) {
   return false
 }
 
+// 根据退住七步流程校验当前节点需要的数据。
+// 这里只负责用户体验层校验，后端仍会再次校验节点、老人状态和合同归属。
 function validateCurrentStep() {
   if (currentStep.value === 1) return requireFields([{ label: '老人姓名', value: form.elderName }, { label: '身份证号', value: form.idCard }, { label: '退住日期', value: form.checkOutDate }, { label: '退住原因', value: form.reason }])
-  if (currentStep.value === 2 || currentStep.value === 5) return requireFields([{ label: '审批结果', value: form.approveResult }])
+  if (currentStep.value === 2 || currentStep.value === 5 || currentStep.value === 6) return requireFields([{ label: '审批结果', value: form.approveResult }])
   if (currentStep.value === 3) return requireFields([{ label: '合同编号', value: form.contractId }, { label: '解除日期', value: form.terminateDate }, { label: '解除协议', value: form.terminateAgreement }])
-  if (currentStep.value === 6) {
+  if (currentStep.value === 7) {
     if (Number(form.refundAmount) < 0) { ElMessage.warning('退款金额不能小于 0'); return false }
     if (actualRefundDue.value > 0 && !form.refundWay) { ElMessage.warning('请选择退款方式'); return false }
     if (actualRefundDue.value > 0 && !form.refundVoucher) { ElMessage.warning('请上传退款凭证'); return false }
@@ -473,6 +492,7 @@ function validateCurrentStep() {
 }
 
 const loadEligibleElders = async () => {
+  // 后端只返回状态为“在住”且没有进行中退住申请的老人。
   elderLoading.value = true
   try {
     const { data } = await axios.post('/checkOutEligibleElders', { keyword: elderKeyword.value })
@@ -490,13 +510,15 @@ const openElderDialog = () => {
 }
 
 const selectElder = (elder) => {
+  // 同时保存主键、姓名和身份证。真正创建退住单时后端仍以 elderId 对应档案为准。
   form.elderId = elder.id
-  form.elderName = elder.name
+  form.elderName = elder.realName
   form.idCard = elder.idCard
   elderDialogVisible.value = false
 }
 
 const loadActiveContracts = async () => {
+  // 使用退住单ID查询，后端会从退住单反查老人ID，防止越权查看其他老人合同。
   if (!id) return
   contractLoading.value = true
   try {
@@ -515,12 +537,14 @@ const openContractDialog = () => {
 }
 
 const selectContract = (contract) => {
+  // contractId 用于后端精确更新，contractNo 仅用于页面展示。
   form.contractId = contract.id
   form.contractNo = contract.contractNo
   contractDialogVisible.value = false
 }
 
 const beforeAgreementUpload = (file) => {
+  // 解除协议按照原型要求仅允许PDF，并在浏览器端先限制60MB。
   const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
   if (!isPdf) {
     ElMessage.error('解除协议仅支持 PDF 文件')
@@ -534,6 +558,7 @@ const beforeAgreementUpload = (file) => {
 }
 
 const onAgreementUploadSuccess = (res) => {
+  // FileController 当前直接返回URL字符串；同时兼容未来改成 {data:url} 的响应格式。
   const fileUrl = typeof res === 'string' ? res : (res && (res.data || res.url))
   if (!fileUrl || String(fileUrl).startsWith('error:')) {
     ElMessage.error(fileUrl || '上传失败')
@@ -546,6 +571,7 @@ const onAgreementUploadSuccess = (res) => {
 const onAgreementUploadError = () => ElMessage.error('PDF 上传失败，请检查后端服务和文件大小')
 
 const beforeRefundVoucherUpload = (file) => {
+  // 退款凭证是实际退款证明，因此限制为常用图片格式，并控制在5MB以内。
   const isImage = ['image/png', 'image/jpeg'].includes(file.type) || /\.(png|jpe?g)$/i.test(file.name)
   if (!isImage) {
     ElMessage.error('退款凭证仅支持 PNG、JPG、JPEG 图片')
@@ -559,6 +585,7 @@ const beforeRefundVoucherUpload = (file) => {
 }
 
 const onRefundVoucherUploadSuccess = (res) => {
+  // 上传接口返回纯字符串时直接使用；对象响应则读取 data 或 url 字段。
   const fileUrl = typeof res === 'string' ? res : (res && (res.data || res.url))
   if (!fileUrl || String(fileUrl).startsWith('error:')) {
     ElMessage.error(fileUrl || '退款凭证上传失败')
@@ -571,9 +598,11 @@ const onRefundVoucherUploadSuccess = (res) => {
 const onRefundVoucherUploadError = () => ElMessage.error('退款凭证上传失败，请检查后端服务')
 
 const loadDetail = async () => {
+  // 根据退住单ID恢复数据库节点；进入账单相关步骤后额外加载本次退住关联账单。
   if (!id) return
   try {
-    const { data } = await axios.post('http://localhost:8080/checkOutDetail', { id })
+    const { data } = await axios.post('/checkOutDetail', { id })
+    // 当前控制器直接返回实体对象；保留 data.data 兼容统一响应体改造。
     const detailData = data && data.data ? data.data : data
     if (detailData && detailData.id) {
       Object.assign(form, detailData)
@@ -591,7 +620,8 @@ const loadDetail = async () => {
 const loadBills = async () => {
   if (!id) return
   try {
-    const { data } = await axios.post('http://localhost:8080/checkOutBills', { id })
+    const { data } = await axios.post('/checkOutBills', { id })
+    // 当前账单接口直接返回分类Map；兼容可能存在的统一响应包装。
     const billData = data && data.data ? data.data : data
     if (billData) {
       const d = billData
@@ -611,7 +641,7 @@ const loadBills = async () => {
 const loadLogs = async () => {
   if (!id) return
   try {
-    const { data } = await axios.post('http://localhost:8080/checkOutLogs', { id })
+    const { data } = await axios.post('/checkOutLogs', { id })
     logs.value = Array.isArray(data) ? data : ((data && data.data) || [])
   } catch (e) {
     console.error('加载日志失败', e)
@@ -619,17 +649,19 @@ const loadLogs = async () => {
 }
 
 const onSubmit = async () => {
+  // 所有步骤提交前先执行当前节点校验，并用submitting阻止重复点击。
   if (submitting.value || !validateCurrentStep()) return
   submitting.value = true
   try {
     if (currentStep.value === 2 && form.approveResult === '驳回') {
       form.flowStatus = '已关闭'
     }
-    if (currentStep.value === 5 && form.approveResult === '驳回') {
+    if ((currentStep.value === 5 || currentStep.value === 6) && form.approveResult === '驳回') {
       form.flowStatus = '已关闭'
     }
 
     if (currentStep.value === 1) {
+      // 发起退住只提交本步骤需要的字段，避免把 bills 对象发送给 List<Bill> 导致反序列化失败。
       const startPayload = {
         elderId: form.elderId || null,
         elderName: form.elderName,
@@ -638,7 +670,7 @@ const onSubmit = async () => {
         checkoutReason: form.reason,
         remark: form.remark
       }
-      const { data } = await axios.post('http://localhost:8080/startCheckOut', startPayload)
+      const { data } = await axios.post('/startCheckOut', startPayload)
       if (data && data.code === 200) {
         ElMessage.success('申请提交成功')
         router.push('/CheckOut')
@@ -652,14 +684,17 @@ const onSubmit = async () => {
       id,
       step: currentStep.value,
       ...form,
+      // 页面字段名与后端DTO不同，在提交前显式完成转换。
       refundMethod: form.refundWay,
-      refundAmount: currentStep.value === 6 ? Number(form.actualRefundAmount || finalRefundAmount.value || 0) : form.refundAmount,
+      // 实退金额优先使用用户填写值；未填写时使用页面计算的最终应退金额。
+      refundAmount: currentStep.value === 7 ? Number(form.actualRefundAmount || finalRefundAmount.value || 0) : form.refundAmount,
+      // 只有调整账单步骤发送账单数组，其他步骤不携带账单数据。
       bills: currentStep.value === 4 ? form.bills.all : undefined
     }
 
-    const { data } = await axios.post('http://localhost:8080/submitCheckOutStep', payload)
+    const { data } = await axios.post('/submitCheckOutStep', payload)
     if (data && data.code === 200) {
-      if (currentStep.value === 6) {
+      if (currentStep.value === 7) {
         await ElMessageBox.alert(
           `退款方式: ${form.refundWay}<br/>退款金额: ${form.refundAmount}<br/>退款备注: ${form.refundRemark}`,
           '退款信息',
@@ -668,6 +703,7 @@ const onSubmit = async () => {
         router.push('/CheckOut')
       } else {
         ElMessage.success('提交成功')
+        // 流程节点以后端返回值为准，避免前端自行 +1 与数据库节点不同步。
         currentStep.value = data.currentStep || currentStep.value
         form.approveResult = ''
         form.approveRemark = ''
@@ -686,8 +722,9 @@ const onSubmit = async () => {
 }
 
 const onRevoke = async () => {
+  // 原型允许在退住审批通过前撤销，后端会按 currentStep 再次校验并清理合同临时关联。
   try {
-    const { data } = await axios.post('http://localhost:8080/revokeCheckOut', { id })
+    const { data } = await axios.post('/revokeCheckOut', { id })
     if (data && data.code === 200) {
       ElMessage.success('已撤销')
       router.push('/CheckOut')

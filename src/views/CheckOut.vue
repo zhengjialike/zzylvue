@@ -1,4 +1,5 @@
 <template>
+  <!-- 退住管理列表页：展示退住单、当前流程节点，并提供发起退住和查看详情入口。 -->
   <div>
     <!-- 搜索条件栏 -->
     <div style="text-align: left; margin-bottom: 10px">
@@ -25,7 +26,7 @@
       <el-table-column label="状态" width="100">
         <template #default="scope">
           <el-tag :type="statusType(scope.row.flowStatus)">{{ scope.row.flowStatus }}</el-tag>
-          <div style="font-size: 12px; color: #999">步骤{{ scope.row.currentStep }}/6</div>
+          <div style="font-size: 12px; color: #999">步骤{{ scope.row.currentStep }}/7</div>
         </template>
       </el-table-column>
       <el-table-column label="操作" width="120">
@@ -51,6 +52,7 @@ const tableData = ref([])
 const total = ref(0)
 
 function loadList() {
+  // 根据单据编号、老人、身份证及退住日期范围分页查询退住申请。
   if (dateRange.value && dateRange.value.length === 2) {
     condForm.startDate = dateRange.value[0]
     condForm.endDate = dateRange.value[1]
@@ -71,10 +73,12 @@ function resetCond() {
 }
 
 function startApply() {
+  // 新建退住申请时不传ID，详情页会要求先从可退住老人列表中选择老人。
   router.push('/CheckOutDetail')
 }
 
 function viewDetail(row) {
+  // 查看已有退住单时传递ID，详情页按照数据库currentStep展示对应操作区域。
   router.push({ path: '/CheckOutDetail', query: { id: row.id } })
 }
 

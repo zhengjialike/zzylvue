@@ -1,4 +1,5 @@
 <template>
+  <!-- 合同管理查询页：合同由入住签约自动创建、退住解除合同自动置为已失效。 -->
   <div>
     <!-- 搜索条件栏 -->
     <div style="text-align: left; margin-bottom: 10px">
@@ -67,10 +68,22 @@
         <el-descriptions-item label="身份证号">{{ detail.idCard }}</el-descriptions-item>
         <el-descriptions-item label="合同期限">{{ detail.startDate }} ~ {{ detail.endDate }}</el-descriptions-item>
         <el-descriptions-item label="合同状态">{{ detail.status }}</el-descriptions-item>
+        <el-descriptions-item label="入住单号">{{ detail.checkInBillNo || '——' }}</el-descriptions-item>
+        <el-descriptions-item label="签约日期">{{ detail.signDate || '——' }}</el-descriptions-item>
+        <el-descriptions-item label="丙方姓名" v-if="detail.partyCName">{{ detail.partyCName }}</el-descriptions-item>
+        <el-descriptions-item label="丙方联系方式" v-if="detail.partyCPhone">{{ detail.partyCPhone }}</el-descriptions-item>
+        <el-descriptions-item label="合同文件">
+          <el-link v-if="detail.contractFile" :href="detail.contractFile" target="_blank" type="primary">查看合同</el-link>
+          <span v-else>——</span>
+        </el-descriptions-item>
         <el-descriptions-item label="创建人">{{ detail.creator }}</el-descriptions-item>
         <el-descriptions-item label="创建时间">{{ detail.createTime }}</el-descriptions-item>
-        <el-descriptions-item label="失效时间">{{ detail.invalidTime }}</el-descriptions-item>
-        <el-descriptions-item label="备注">{{ detail.remark }}</el-descriptions-item>
+        <el-descriptions-item v-if="detail.status === '已失效'" label="解除日期">{{ detail.terminateDate || '——' }}</el-descriptions-item>
+        <el-descriptions-item v-if="detail.status === '已失效'" label="提交人">{{ detail.terminateSubmitter || '——' }}</el-descriptions-item>
+        <el-descriptions-item v-if="detail.status === '已失效'" label="解除协议">
+          <el-link v-if="detail.terminateAgreement" :href="detail.terminateAgreement" target="_blank" type="primary">查看解除协议</el-link>
+          <span v-else>——</span>
+        </el-descriptions-item>
       </el-descriptions>
     </el-dialog>
   </div>
@@ -97,6 +110,7 @@ const detailDialogVisible = ref(false)
 const detail = ref({})
 
 function loadList() {
+  // 合同期限控件返回日期数组，提交前拆分为后端分页DTO需要的开始和结束日期。
   if (dateRange.value && dateRange.value.length === 2) {
     condForm.startDate = dateRange.value[0]
     condForm.endDate = dateRange.value[1]
@@ -122,6 +136,7 @@ function resetCond() {
 }
 
 function viewDetail(row) {
+  // 当前详情直接使用列表行数据展示；如后续字段增多可改为调用/contractDetail。
   axios.post('/contractDetail', { id: row.id }).then(res => {
     detail.value = res.data || {}
     detailDialogVisible.value = true
