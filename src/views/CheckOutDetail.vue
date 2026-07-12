@@ -573,7 +573,7 @@ const onRefundVoucherUploadError = () => ElMessage.error('退款凭证上传失�
 const loadDetail = async () => {
   if (!id) return
   try {
-    const { data } = await axios.post('http://localhost:8080/checkOutDetail', { id })
+    const { data } = await axios.post('/checkOutDetail', { id })
     const detailData = data && data.data ? data.data : data
     if (detailData && detailData.id) {
       Object.assign(form, detailData)
@@ -591,7 +591,7 @@ const loadDetail = async () => {
 const loadBills = async () => {
   if (!id) return
   try {
-    const { data } = await axios.post('http://localhost:8080/checkOutBills', { id })
+    const { data } = await axios.post('/checkOutBills', { id })
     const billData = data && data.data ? data.data : data
     if (billData) {
       const d = billData
@@ -611,7 +611,7 @@ const loadBills = async () => {
 const loadLogs = async () => {
   if (!id) return
   try {
-    const { data } = await axios.post('http://localhost:8080/checkOutLogs', { id })
+    const { data } = await axios.post('/checkOutLogs', { id })
     logs.value = Array.isArray(data) ? data : ((data && data.data) || [])
   } catch (e) {
     console.error('加载日志失败', e)
@@ -638,7 +638,7 @@ const onSubmit = async () => {
         checkoutReason: form.reason,
         remark: form.remark
       }
-      const { data } = await axios.post('http://localhost:8080/startCheckOut', startPayload)
+      const { data } = await axios.post('/startCheckOut', startPayload)
       if (data && data.code === 200) {
         ElMessage.success('申请提交成功')
         router.push('/CheckOut')
@@ -657,7 +657,7 @@ const onSubmit = async () => {
       bills: currentStep.value === 4 ? form.bills.all : undefined
     }
 
-    const { data } = await axios.post('http://localhost:8080/submitCheckOutStep', payload)
+    const { data } = await axios.post('/submitCheckOutStep', payload)
     if (data && data.code === 200) {
       if (currentStep.value === 6) {
         await ElMessageBox.alert(
@@ -687,7 +687,7 @@ const onSubmit = async () => {
 
 const onRevoke = async () => {
   try {
-    const { data } = await axios.post('http://localhost:8080/revokeCheckOut', { id })
+    const { data } = await axios.post('/revokeCheckOut', { id })
     if (data && data.code === 200) {
       ElMessage.success('已撤销')
       router.push('/CheckOut')
