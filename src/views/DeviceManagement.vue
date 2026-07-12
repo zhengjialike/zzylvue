@@ -101,8 +101,11 @@
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus'
+
+const router = useRouter()
 
 // 对话框状态
 const deviceDialogVisible = ref(false)
@@ -277,8 +280,10 @@ function delDevice(id) {
 
 // ---------- 查看 ----------
 function viewDevice(row) {
-  // TODO: 跳转到设备详情页
-  ElMessage.info('查看功能待开发')
+  router.push({
+    path: '/deviceDetail',
+    query: { id: row.id }
+  })
 }
 
 // ---------- 工具函数 ----------

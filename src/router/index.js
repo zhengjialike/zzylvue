@@ -42,8 +42,18 @@ const routes = [
       {path:'/RoomType',component:()=>import('@/views/RoomType.vue')},
       {path:'/FloorBed',component:()=>import('@/views/FloorBed.vue')},
       {path:'/DeviceManagement',component:()=>import('@/views/DeviceManagement.vue')},
+      {
+        path: '/deviceDetail',
+        name: 'DeviceDetail',
+        component: () => import('@/views/DeviceDetail.vue'),
+        meta: { title: '设备详情' }
+      },
       {path:'/AlertRule',component:()=>import('@/views/AlertRule.vue')},
-      {path:'/AlertRecord',component:()=>import('@/views/AlertRecord.vue')}
+      {path:'/AlertRecord',component:()=>import('@/views/AlertRecord.vue')},
+      {path:'/SmartBedMonitor',component:()=>import('@/views/SmartBedMonitor.vue')},
+      {path:'/OrderManagement',component:()=>import('@/views/OrderManagement.vue')},
+      {path:'/OrderDetail',component:()=>import('@/views/OrderDetail.vue')},
+      {path:'/RefundManagement',component:()=>import('@/views/RefundManagement.vue')}
     ]
   }
 ]
