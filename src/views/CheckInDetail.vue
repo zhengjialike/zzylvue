@@ -1,4 +1,5 @@
 <template>
+  <!-- 入住五步流程详情页：申请入住、入住评估、入住审批、入住配置、签约办理。 -->
   <div style="padding: 20px">
     <!-- 顶部步骤条 -->
     <el-steps :active="activeStep - 1" finish-status="success" align-center style="margin-bottom: 30px">
@@ -283,7 +284,9 @@
             start-placeholder="开始日期" end-placeholder="结束日期" value-format="YYYY-MM-DD" style="width: 360px" />
         </el-form-item>
         <el-form-item label="入住床位">
-          <el-input v-model="form.bedNo" placeholder="选择入住床位" />
+          <el-input v-model="form.bedNo" readonly placeholder="选择入住床位" @click="bedDialogVisible = true">
+            <template #append><el-button @click="bedDialogVisible = true">选择</el-button></template>
+          </el-input>
         </el-form-item>
         <el-form-item label="护理等级">
           <el-select v-model="form.nursingLevel" placeholder="请选择">
@@ -332,6 +335,23 @@
       <div style="text-align: right; margin-top: 10px; font-weight: bold">
         合计应缴：{{ billTotal }} 元/月
       </div>
+    </el-dialog>
+
+    <!-- 原型要求从真实空闲床位中选择，已入住床位不能点击。 -->
+    <el-dialog v-model="bedDialogVisible" title="选择入住床位" width="620px">
+      <el-table :data="availableBeds" v-loading="bedLoading" max-height="380px">
+        <el-table-column prop="bedNumber" label="床位号" min-width="160" />
+        <el-table-column prop="roomId" label="房间ID" min-width="120" />
+        <el-table-column label="状态" width="100">
+          <template #default><el-tag type="success">空闲</el-tag></template>
+        </el-table-column>
+        <el-table-column label="操作" width="100">
+          <template #default="scope">
+            <el-button type="primary" link @click="selectBed(scope.row)">选择</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-empty v-if="!bedLoading && availableBeds.length === 0" description="暂无空闲床位" />
     </el-dialog>
 
     <!-- 步骤5: 签约办理 -->
@@ -401,7 +421,7 @@
     <div style="text-align: center; margin-top: 20px" v-if="detail.flowStatus !== '已完成' && detail.flowStatus !== '已关闭' && activeStep <= 5">
       <el-button @click="goBack">返回</el-button>
       <el-button type="primary" :loading="submitting" @click="submitStep">{{ submitBtnText }}</el-button>
-      <el-button v-if="activeStep === 1" type="warning" @click="revoke">撤销</el-button>
+      <el-button v-if="id && detail.flowStatus === '申请中'" type="warning" :loading="revoking" @click="revoke">撤销</el-button>
     </div>
     <div style="text-align: center; margin-top: 20px" v-else>
       <el-button @click="goBack">返回列表</el-button>
@@ -436,7 +456,13 @@ const logs = ref([])
 const step1Tab = ref('base')
 const step2Tab = ref('health')
 const billPreviewVisible = ref(false)
+const bedDialogVisible = ref(false)
+const bedLoading = ref(false)
+const availableBeds = ref([])
+// 提交锁：请求进行期间禁用按钮，避免连续点击生成重复流程记录或重复合同。
 const submitting = ref(false)
+// 撤销请求单独加锁，防止重复点击产生多次撤销日志或并发释放床位。
+const revoking = ref(false)
 
 // 静态选项
 const nationOptions = ['汉族', '回族', '满族', '其他']
@@ -475,7 +501,7 @@ const form = reactive({
   // 步骤2 健康评估
   diseases: [], medications: [{ name: '', method: '', dose: '' }],
   riskFall: '', riskLost: '', riskChoke: '', riskComa: '', riskSuicide: '',
-  bodyConditions: [], specialMedical: [], selfCare: '', behaviorAbnormal: '', medicalReport: '',
+  bodyConditions: [], specialMedical: [], selfCare: '', behaviorAbnormal: [], medicalReport: '',
   // 能力评估
   evalAnswers: reactive({}),
   // 评估报告
@@ -563,6 +589,7 @@ function parseIdCard() {
 const mobilePattern = /^1[3-9]\d{9}$/
 const idCardPattern = /^\d{17}[\dXx]$/
 
+// 通用必填校验。传入字段显示名称和值，找到第一个空值后立即给出明确提示。
 function requireFields(fields) {
   const missing = fields.find(({ value }) => value === '' || value == null || (Array.isArray(value) && value.length === 0))
   if (!missing) return true
@@ -570,6 +597,7 @@ function requireFields(fields) {
   return false
 }
 
+// 按入住流程当前步骤执行不同校验，并在校验失败时自动切换到对应页签。
 function validateCurrentStep() {
   if (activeStep.value === 1) {
     if (!requireFields([{ label: '老人姓名', value: form.elderName }, { label: '老人身份证号', value: form.idCard }, { label: '家庭住址', value: form.address }, { label: '联系方式', value: form.phone }])) { step1Tab.value = 'base'; return false }
@@ -579,9 +607,30 @@ function validateCurrentStep() {
     if (!familyValid) { step1Tab.value = 'family'; ElMessage.warning('家属信息不完整，请输入正确的姓名、手机号和关系'); return false }
     if (!form.photo || !form.idCardFront || !form.idCardBack) { step1Tab.value = 'upload'; ElMessage.warning('请上传一寸照片和身份证正反面'); return false }
   }
-  if (activeStep.value === 2 && !form.finalLevel) { step2Tab.value = 'report'; ElMessage.warning('请完成能力评估并确认最终等级'); return false }
+  if (activeStep.value === 2) {
+    // 健康评估原来使用一条合并判断，任意字段缺失都会显示同一句提示，用户无法知道具体缺少哪项。
+    // 改为逐字段校验，同时避免已上传报告却因其他风险项遗漏而被误认为“报告未上传”。
+    const healthValid = requireFields([
+      { label: '疾病诊断（无疾病请选择“无疾病”）', value: form.diseases },
+      { label: '近30天跌倒次数', value: form.riskFall },
+      { label: '近30天走失次数', value: form.riskLost },
+      { label: '近30天噎食次数', value: form.riskChoke },
+      { label: '近30天昏迷次数', value: form.riskComa },
+      { label: '近30天自杀风险次数', value: form.riskSuicide },
+      { label: '自理能力', value: form.selfCare },
+      { label: '近期体检报告', value: form.medicalReport }
+    ])
+    if (!healthValid) { step2Tab.value = 'health'; return false }
+    const unanswered = EVAL_QUESTIONS.some(q => form.evalAnswers[q.id] === undefined || form.evalAnswers[q.id] === null || form.evalAnswers[q.id] === '')
+    if (unanswered) { step2Tab.value = 'ability'; ElMessage.warning('请完成全部能力评估题目'); return false }
+    if (!form.finalLevel) { step2Tab.value = 'report'; ElMessage.warning('请确认能力最终等级'); return false }
+  }
   if (activeStep.value === 3 && !form.approveResult) return requireFields([{ label: '审批结果', value: form.approveResult }])
-  if (activeStep.value === 4) return requireFields([{ label: '床位号', value: form.bedNo }, { label: '护理等级', value: form.nursingLevel }])
+  if (activeStep.value === 4) return requireFields([
+    { label: '入住期限', value: form.checkInTerm }, { label: '床位号', value: form.bedNo },
+    { label: '护理等级', value: form.nursingLevel }, { label: '费用期限', value: form.feeTerm },
+    { label: '护理费用', value: form.nursingFee }, { label: '床位费用', value: form.bedFee }
+  ])
   if (activeStep.value === 5) {
     if (!requireFields([{ label: '入住期限', value: form.checkInTerm }, { label: '合同名称', value: form.contractName }, { label: '签约日期', value: form.signDate }, { label: '合同文件', value: form.contractFile }])) return false
     if (form.thirdPartyPhone && !mobilePattern.test(form.thirdPartyPhone)) { ElMessage.warning('丙方联系方式格式错误，请重新输入'); return false }
@@ -605,15 +654,43 @@ function beforeImg(file) {
 }
 function beforePdf(file) {
   if (file.type !== 'application/pdf') { ElMessage.error('仅支持PDF格式'); return false }
+  if (file.size / 1024 / 1024 > 60) { ElMessage.error('PDF文件大小不能超过60M'); return false }
   return true
 }
+
+// 空闲床位来自后端 t_bed，提交时后端还会二次校验，防止多人同时选择同一床位。
+async function loadAvailableBeds() {
+  bedLoading.value = true
+  try {
+    const { data } = await axios.get('/checkInAvailableBeds')
+    availableBeds.value = Array.isArray(data) ? data : []
+  } catch (_) {
+    ElMessage.error('加载空闲床位失败')
+  } finally {
+    bedLoading.value = false
+  }
+}
+
+function selectBed(bed) {
+  form.bedNo = bed.bedNumber
+  bedDialogVisible.value = false
+}
+
 function uploadSuccess(res, field) {
   const path = (res && (res.data || res)) || ''
-  form[field] = typeof path === 'string' ? path : (path.url || '')
+  const url = typeof path === 'string' ? path : (path.url || '')
+  // 上传接口以 error: 开头表示本地或 OSS 保存失败，不能再把它当作有效文件地址。
+  if (!url || url.toLowerCase().startsWith('error:')) {
+    form[field] = ''
+    ElMessage.error(url || '上传失败，未获取到文件地址')
+    return
+  }
+  form[field] = url
   ElMessage.success('上传成功')
 }
 
 function loadDetail() {
+  // 新建申请没有ID，只展示第1步；已有申请同时加载主表、家属和操作日志。
   if (!id.value) { activeStep.value = 1; detail.value = {}; return }
   axios.post('/checkInDetail', { id: id.value }).then(res => {
     detail.value = res.data || {}
@@ -663,6 +740,7 @@ function fillForm() {
 }
 
 function submitStep() {
+  // 第1步调用发起接口，后续步骤统一调用步骤提交接口；驳回前额外进行二次确认。
   if (submitting.value || !validateCurrentStep()) return
   if (activeStep.value === 1 && !id.value) {
     const payload = { ...form, familyMembers: form.familyMembers }
@@ -687,20 +765,26 @@ function submitStep() {
 
 function doSubmit() {
   const payload = { ...form, id: id.value, step: activeStep.value }
+  // 以下字段在页面模型和后端DTO中的名称不同，提交前必须显式转换。
+  // 风险事件：页面使用更短的名称，后端和数据库使用完整业务名称。
   payload.riskFalls = form.riskFall
   payload.riskChoking = form.riskChoke
+  // 多选健康数据直接传数组，后端统一序列化为JSON字符串保存。
   payload.bodyHealth = form.bodyConditions
   payload.medicalCare = form.specialMedical
   payload.abilitySelf = form.selfCare
   payload.behaviorIssues = form.behaviorAbnormal
+  // 最终能力等级及变更原因在能力评估步骤形成。
   payload.evalLevel = form.finalLevel
   payload.levelChangeReason = form.levelChangeOther
     ? [...form.levelChangeBasis, form.levelChangeOther]
     : form.levelChangeBasis
+  // 页面中的“医保支付”和“丙方”字段需要映射到后端实体字段。
   payload.insurancePay = form.medicalPay
   payload.partyCName = form.thirdPartyName
   payload.partyCPhone = form.thirdPartyPhone
   if (form.checkInTerm && form.checkInTerm.length === 2) {
+    // 日期范围控件返回数组，拆分为数据库的开始日期和结束日期。
     payload.startDate = form.checkInTerm[0]
     payload.endDate = form.checkInTerm[1]
   }
@@ -708,6 +792,7 @@ function doSubmit() {
     payload.feeStartDate = form.feeTerm[0]
     payload.feeEndDate = form.feeTerm[1]
   }
+  // 除保存评估汇总JSON外，同时保存四个独立分数字段，便于查询和统计。
   payload.evalScores = { total: totalScore.value, self: selfScore.value, mental: mentalScore.value, social: socialScore.value }
   payload.evalTotalScore = totalScore.value
   payload.evalSelfScore = selfScore.value
@@ -717,21 +802,46 @@ function doSubmit() {
   axios.post('/submitCheckInStep', payload).then(res => {
     if (res.data.code === 200) {
       ElMessage.success(res.data.msg)
+      if (res.data.contractNo) form.contractNo = res.data.contractNo
       loadDetail()
     } else ElMessage.error(res.data.msg || '提交失败')
   }).catch(() => ElMessage.error('提交失败，请稍后重试')).finally(() => { submitting.value = false })
 }
 
-function revoke() {
-  ElMessageBox.confirm('此操作将撤销已提交信息，是否继续？', '确认撤销', { type: 'warning' })
-    .then(() => {
-      axios.post('/revokeCheckIn', { id: id.value }).then(res => {
-        if (res.data.code === 200) { ElMessage.success(res.data.msg); goBack() }
-      })
-    }).catch(() => {})
+async function revoke() {
+  if (revoking.value) return
+  try {
+    await ElMessageBox.confirm('此操作将撤销已提交信息，是否继续？', '确认撤销', { type: 'warning' })
+  } catch (_) {
+    // 用户主动取消确认框不需要提示错误。
+    return
+  }
+
+  revoking.value = true
+  try {
+    const res = await axios.post('/revokeCheckIn', { id: id.value })
+    if (res.data.code === 200) {
+      ElMessage.success(res.data.msg || '撤销成功')
+      goBack()
+    } else {
+      // 原实现没有处理业务失败，因此接口拒绝撤销时页面表现为“点击没有反应”。
+      ElMessage.error(res.data.msg || '撤销失败')
+    }
+  } catch (error) {
+    const message = error.response?.status === 401
+      ? '登录状态已失效，请重新登录后再撤销'
+      : (error.response?.data?.message || '撤销失败，请检查后端服务后重试')
+    ElMessage.error(message)
+  } finally {
+    revoking.value = false
+  }
 }
 
 function goBack() { router.push('/CheckIn') }
 
-onMounted(() => { form.signDate = new Date().toISOString().slice(0, 10); loadDetail() })
+onMounted(() => {
+  form.signDate = new Date().toISOString().slice(0, 10)
+  loadAvailableBeds()
+  loadDetail()
+})
 </script>

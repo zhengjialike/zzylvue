@@ -1,4 +1,5 @@
 <template>
+  <!-- 入住管理列表页：负责查询、分页、发起申请和进入五步流程详情。 -->
   <div>
     <!-- 搜索条件栏 -->
     <div style="text-align: left; margin-bottom: 10px">
@@ -52,6 +53,7 @@ const tableData = ref([])
 const total = ref(0)
 
 function loadList() {
+  // 将页面查询条件提交给后端/checkInPage，并使用返回的list和total刷新表格及分页。
   if (dateRange.value && dateRange.value.length === 2) {
     condForm.startDate = dateRange.value[0]
     condForm.endDate = dateRange.value[1]
@@ -72,10 +74,12 @@ function resetCond() {
 }
 
 function startApply() {
+  // 不携带ID表示创建新入住申请，详情页会从第1步开始。
   router.push('/CheckInDetail')
 }
 
 function viewDetail(row) {
+  // 携带入住单主键进入详情页，由详情接口恢复currentStep和历史数据。
   router.push({ path: '/CheckInDetail', query: { id: row.id } })
 }
 

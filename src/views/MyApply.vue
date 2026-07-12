@@ -23,6 +23,14 @@
       <el-button @click="resetCond">重置</el-button>
     </div>
 
+    <!-- 原型按流程状态提供快捷筛选；空字符串表示全部。 -->
+    <el-tabs v-model="condForm.flowStatus" @tab-change="handleStatusChange" style="margin-bottom: 10px">
+      <el-tab-pane label="全部" name="" />
+      <el-tab-pane label="申请中" name="申请中" />
+      <el-tab-pane label="已完成" name="已完成" />
+      <el-tab-pane label="已关闭" name="已关闭" />
+    </el-tabs>
+
     <!-- 操作按钮 -->
     <div style="text-align: left; margin-bottom: 10px">
       <el-button type="primary" @click="openCategoryDialog">发起申请</el-button>
@@ -46,7 +54,7 @@
           <el-button
             type="warning"
             size="small"
-            :disabled="scope.row.flowStatus !== '申请中'"
+            :disabled="!scope.row.canRevoke"
             @click="revoke(scope.row)"
           >撤销</el-button>
         </template>
@@ -78,47 +86,6 @@
       </el-form>
     </el-dialog>
 
-    <!-- 入住申请对话框 -->
-    <el-dialog v-model="checkInDialogVisible" title="入住申请" width="40%">
-      <el-form label-width="100px">
-        <el-form-item label="老人姓名"><el-input v-model="checkInForm.elderName" /></el-form-item>
-        <el-form-item label="身份证号"><el-input v-model="checkInForm.idCard" /></el-form-item>
-        <el-form-item label="入住床位"><el-input v-model="checkInForm.bedNo" /></el-form-item>
-        <el-form-item label="入住日期"><el-date-picker v-model="checkInForm.checkInDate" type="date" value-format="YYYY-MM-DD" /></el-form-item>
-        <el-form-item label="备注"><el-input v-model="checkInForm.remark" type="textarea" /></el-form-item>
-        <el-form-item style="margin-left: 40%">
-          <el-button type="primary" round @click="submitCheckIn">确认</el-button>
-          <el-button round @click="checkInDialogVisible = false">取消</el-button>
-        </el-form-item>
-      </el-form>
-    </el-dialog>
-
-    <!-- 退住申请对话框 -->
-    <el-dialog v-model="checkOutDialogVisible" title="退住申请" width="40%">
-      <el-form label-width="100px">
-        <el-form-item label="老人姓名"><el-input v-model="checkOutForm.elderName" /></el-form-item>
-        <el-form-item label="身份证号"><el-input v-model="checkOutForm.idCard" /></el-form-item>
-        <el-form-item label="退住日期"><el-date-picker v-model="checkOutForm.checkOutDate" type="date" value-format="YYYY-MM-DD" /></el-form-item>
-        <el-form-item label="备注"><el-input v-model="checkOutForm.remark" type="textarea" /></el-form-item>
-        <el-form-item style="margin-left: 40%">
-          <el-button type="primary" round @click="submitCheckOut">确认</el-button>
-          <el-button round @click="checkOutDialogVisible = false">取消</el-button>
-        </el-form-item>
-      </el-form>
-    </el-dialog>
-
-    <!-- 详情对话框 -->
-    <el-dialog v-model="detailDialogVisible" title="申请详情" width="45%">
-      <el-descriptions :column="1" border>
-        <el-descriptions-item label="单据编号">{{ detail.billNo }}</el-descriptions-item>
-        <el-descriptions-item label="单据标题">{{ detail.billTitle }}</el-descriptions-item>
-        <el-descriptions-item label="单据类别">{{ detail.billType }}</el-descriptions-item>
-        <el-descriptions-item label="申请人">{{ detail.applicant }}</el-descriptions-item>
-        <el-descriptions-item label="申请时间">{{ detail.applyTime }}</el-descriptions-item>
-        <el-descriptions-item label="完成时间">{{ detail.finishTime || '——' }}</el-descriptions-item>
-        <el-descriptions-item label="流程状态">{{ detail.flowStatus }}</el-descriptions-item>
-      </el-descriptions>
-    </el-dialog>
   </div>
 </template>
 
@@ -133,6 +100,7 @@ const router = useRouter()
 const condForm = reactive({
   billNo: '',
   billType: '',
+  flowStatus: '',
   startDate: '',
   endDate: '',
   pageNum: 1,
@@ -144,15 +112,6 @@ const total = ref(0)
 
 const categoryDialogVisible = ref(false)
 const selectedCategory = ref('入住')
-
-const checkInDialogVisible = ref(false)
-const checkInForm = reactive({ elderName: '', idCard: '', bedNo: '', checkInDate: '', remark: '' })
-
-const checkOutDialogVisible = ref(false)
-const checkOutForm = reactive({ elderName: '', idCard: '', checkOutDate: '', remark: '' })
-
-const detailDialogVisible = ref(false)
-const detail = ref({})
 
 function loadList() {
   if (dateRange.value && dateRange.value.length === 2) {
@@ -171,9 +130,15 @@ function loadList() {
 function resetCond() {
   condForm.billNo = ''
   condForm.billType = ''
+  condForm.flowStatus = ''
   dateRange.value = null
   condForm.startDate = ''
   condForm.endDate = ''
+  condForm.pageNum = 1
+  loadList()
+}
+
+function handleStatusChange() {
   condForm.pageNum = 1
   loadList()
 }
@@ -192,30 +157,6 @@ function confirmCategory() {
   }
 }
 
-function submitCheckIn() {
-  axios.post('/applyCheckIn', checkInForm).then(res => {
-    if (res.data.code === 200) {
-      ElMessage.success(res.data.msg)
-      checkInDialogVisible.value = false
-      loadList()
-    } else {
-      ElMessage.error(res.data.msg)
-    }
-  })
-}
-
-function submitCheckOut() {
-  axios.post('/applyCheckOut', checkOutForm).then(res => {
-    if (res.data.code === 200) {
-      ElMessage.success(res.data.msg)
-      checkOutDialogVisible.value = false
-      loadList()
-    } else {
-      ElMessage.error(res.data.msg)
-    }
-  })
-}
-
 function viewDetail(row) {
   if (row.billType === '入住') {
     router.push({ path: '/CheckInDetail', query: { id: row.id } })
@@ -224,20 +165,28 @@ function viewDetail(row) {
   }
 }
 
-function revoke(row) {
-  ElMessageBox.confirm('此操作将撤销已提交信息，是否继续？', '确认撤销', { type: 'warning' })
-    .then(() => {
-      const url = row.billType === '入住' ? '/revokeCheckIn' : '/revokeCheckOut'
-      axios.post(url, { id: row.id }).then(res => {
-        if (res.data.code === 200) {
-          ElMessage.success(res.data.msg)
-          loadList()
-        } else {
-          ElMessage.error(res.data.msg)
-        }
-      })
-    })
-    .catch(() => {})
+async function revoke(row) {
+  try {
+    await ElMessageBox.confirm('此操作将撤销已提交信息，是否继续？', '确认撤销', { type: 'warning' })
+  } catch (_) {
+    return
+  }
+
+  const url = row.billType === '入住' ? '/revokeCheckIn' : '/revokeCheckOut'
+  try {
+    const res = await axios.post(url, { id: row.id })
+    if (res.data.code === 200) {
+      ElMessage.success(res.data.msg || '撤销成功')
+      loadList()
+    } else {
+      ElMessage.error(res.data.msg || '撤销失败')
+    }
+  } catch (error) {
+    const message = error.response?.status === 401
+      ? '登录状态已失效，请重新登录后再撤销'
+      : (error.response?.data?.message || '撤销失败，请检查后端服务后重试')
+    ElMessage.error(message)
+  }
 }
 
 onMounted(() => {
