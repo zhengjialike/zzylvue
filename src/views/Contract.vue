@@ -29,21 +29,28 @@
     </div>
 
     <!-- 列表 -->
-    <el-table :data="tableData" style="width: 100%" fit>
-      <el-table-column type="index" label="序号" width="60" />
-      <el-table-column prop="contractNo" label="合同编号" width="200" />
-      <el-table-column prop="contractName" label="合同名称" width="180" />
-      <el-table-column prop="elderName" label="老人姓名" width="100" />
-      <el-table-column prop="idCard" label="老人身份证号" width="180" />
-      <el-table-column prop="creator" label="创建人" width="100" />
-      <el-table-column prop="createTime" label="创建时间" width="170" />
-      <el-table-column label="合同期限" width="220">
+    <el-table
+      :data="tableData"
+      class="business-table"
+      style="width: 100%"
+      table-layout="fixed"
+      :header-cell-style="{ textAlign: 'center' }"
+      :cell-style="{ textAlign: 'center' }"
+    >
+      <el-table-column type="index" label="序号" width="55" align="center" />
+      <el-table-column prop="contractNo" label="合同编号" min-width="120" align="center" show-overflow-tooltip />
+      <el-table-column prop="contractName" label="合同名称" min-width="110" align="center" show-overflow-tooltip />
+      <el-table-column prop="elderName" label="老人姓名" min-width="75" align="center" show-overflow-tooltip />
+      <el-table-column prop="idCard" label="老人身份证号" min-width="135" align="center" show-overflow-tooltip />
+      <el-table-column prop="creator" label="创建人" min-width="70" align="center" show-overflow-tooltip />
+      <el-table-column prop="createTime" label="创建时间" min-width="120" align="center" show-overflow-tooltip />
+      <el-table-column label="合同期限" min-width="125" align="center">
         <template #default="scope">
           {{ scope.row.startDate }} ~ {{ scope.row.endDate }}
         </template>
       </el-table-column>
-      <el-table-column prop="status" label="合同状态" width="100" />
-      <el-table-column label="操作" width="100">
+      <el-table-column prop="status" label="合同状态" min-width="75" align="center" />
+      <el-table-column label="操作" width="80" align="center">
         <template #default="scope">
           <el-button type="primary" size="small" @click="viewDetail(scope.row)">查看</el-button>
         </template>
@@ -150,3 +157,13 @@ onMounted(() => {
   loadList()
 })
 </script>
+
+<style scoped>
+.business-table {
+  margin-bottom: 14px;
+}
+
+.business-table :deep(.el-table__cell .cell) {
+  padding: 0 6px;
+}
+</style>

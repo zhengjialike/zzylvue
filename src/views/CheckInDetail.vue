@@ -290,10 +290,10 @@
         </el-form-item>
         <el-form-item label="护理等级">
           <el-select v-model="form.nursingLevel" placeholder="请选择">
-            <el-option label="A特级" value="A特级" />
-            <el-option label="A级" value="A级" />
-            <el-option label="B级" value="B级" />
-            <el-option label="C级" value="C级" />
+            <el-option label="一级护理" value="一级护理" />
+            <el-option label="二级护理" value="二级护理" />
+            <el-option label="三级护理" value="三级护理" />
+            <el-option label="四级护理" value="四级护理" />
           </el-select>
         </el-form-item>
 

@@ -15,21 +15,28 @@
       <el-button type="primary" @click="startApply">发起退住申请</el-button>
     </div>
 
-    <el-table :data="tableData" style="width: 100%" fit>
-      <el-table-column type="index" label="序号" width="60" />
-      <el-table-column prop="billNo" label="单据编号" width="200" />
-      <el-table-column prop="elderName" label="老人姓名" width="100" />
-      <el-table-column prop="idCard" label="身份证号" width="180" />
-      <el-table-column prop="applicant" label="创建人" width="100" />
-      <el-table-column prop="createTime" label="创建时间" width="170" />
-      <el-table-column prop="checkOutDate" label="退住日期" width="120" />
-      <el-table-column label="状态" width="100">
+    <el-table
+      :data="tableData"
+      class="business-table"
+      style="width: 100%"
+      table-layout="fixed"
+      :header-cell-style="{ textAlign: 'center' }"
+      :cell-style="{ textAlign: 'center' }"
+    >
+      <el-table-column type="index" label="序号" width="55" align="center" />
+      <el-table-column prop="billNo" label="单据编号" min-width="130" align="center" show-overflow-tooltip />
+      <el-table-column prop="elderName" label="老人姓名" min-width="80" align="center" show-overflow-tooltip />
+      <el-table-column prop="idCard" label="身份证号" min-width="145" align="center" show-overflow-tooltip />
+      <el-table-column prop="applicant" label="创建人" min-width="80" align="center" show-overflow-tooltip />
+      <el-table-column prop="createTime" label="创建时间" min-width="125" align="center" show-overflow-tooltip />
+      <el-table-column prop="checkOutDate" label="退住日期" min-width="90" align="center" show-overflow-tooltip />
+      <el-table-column label="状态" min-width="80" align="center">
         <template #default="scope">
           <el-tag :type="statusType(scope.row.flowStatus)">{{ scope.row.flowStatus }}</el-tag>
           <div style="font-size: 12px; color: #999">步骤{{ scope.row.currentStep }}/7</div>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="120">
+      <el-table-column label="操作" width="80" align="center">
         <template #default="scope">
           <el-button type="primary" size="small" @click="viewDetail(scope.row)">查看</el-button>
         </template>
@@ -94,3 +101,13 @@ function statusType(s) {
 
 onMounted(() => loadList())
 </script>
+
+<style scoped>
+.business-table {
+  margin-bottom: 14px;
+}
+
+.business-table :deep(.el-table__cell .cell) {
+  padding: 0 6px;
+}
+</style>
