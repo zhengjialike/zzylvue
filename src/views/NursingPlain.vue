@@ -575,7 +575,20 @@ import {onMounted, reactive, ref} from "vue";
 
   // 定义函数更新锁定状态
   function updateIsLock(row){
-    console.log('更新状态:', row);
-    // TODO: 实现状态切换逻辑
+    const action = row.islock === '启用' ? '禁用' : '启用';
+    ElMessageBox.confirm(`确定要${action}该护理计划吗？`, '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }).then(() => {
+      axios.get('/toggleNursingPlainStatus?id=' + row.id).then(response => {
+        if (response.data.code === 200) {
+          ElMessage.success('状态切换成功');
+          loadNursingPlainPageList(1);
+        } else {
+          ElMessage.error(response.data.msg);
+        }
+      });
+    }).catch(() => {});
   }
 </script>

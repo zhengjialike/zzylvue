@@ -193,8 +193,7 @@ async function showDeviceInfo(row) {
 
   // 如果是房间或床位，设置级联选择器的值
   if (row.locationType === 1 || row.locationType === 2) {
-    // TODO: 需要根据locationId反推级联路径
-    selectedLocation.value = []
+    selectedLocation.value = findLocationPath(row.locationId, row.locationType)
   }
 
   deviceDialogVisible.value = true
@@ -311,22 +310,27 @@ function formatDateTime(dateTimeStr) {
 // ---------- 加载位置数据 ----------
 async function loadLocationData() {
   try {
-    // 加载楼层
     const floorRes = await axios.get('/floorList')
     if (floorRes.data.code === 200) {
       const floors = floorRes.data.data || []
       locationOptions.value = await Promise.all(floors.map(async floor => {
-        // 加载房间
         const roomRes = await axios.get('/roomList', { params: { floorId: floor.id } })
         const rooms = roomRes.data.data || []
 
         return {
           value: floor.id,
           label: floor.floorName,
-          children: rooms.map(room => ({
-            value: room.id,
-            label: room.roomNumber + '房间',
-            children: [] // TODO: 加载床位
+          children: await Promise.all(rooms.map(async room => {
+            const bedRes = await axios.get('/bedList', { params: { roomId: room.id } })
+            const beds = bedRes.data.data || []
+            return {
+              value: room.id,
+              label: room.roomNumber + '房间',
+              children: beds.map(bed => ({
+                value: bed.id,
+                label: bed.bedNumber
+              }))
+            }
           }))
         }
       }))
@@ -334,6 +338,28 @@ async function loadLocationData() {
   } catch (error) {
     console.error('加载位置数据失败', error)
   }
+}
+
+// ---------- 根据locationId反推级联路径 ----------
+function findLocationPath(locationId, locationType) {
+  for (const floor of locationOptions.value) {
+    if (locationType === 1) {
+      for (const room of floor.children || []) {
+        if (room.value === locationId) {
+          return [floor.value, room.value]
+        }
+      }
+    } else if (locationType === 2) {
+      for (const room of floor.children || []) {
+        for (const bed of room.children || []) {
+          if (bed.value === locationId) {
+            return [floor.value, room.value, bed.value]
+          }
+        }
+      }
+    }
+  }
+  return []
 }
 
 // ---------- 加载老人列表 ----------
