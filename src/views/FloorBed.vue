@@ -209,7 +209,7 @@
       </template>
     </el-dialog>
 
-    <!-- 房间详情对话框（TODO：待护理等级和入住管理完成后启用）-->
+    <!-- 房间详情对话框 -->
     <el-dialog v-model="roomDetailVisible" title="房间详情" width="700px">
       <div class="room-detail-content">
         <div class="detail-header">
@@ -229,13 +229,11 @@
           </el-table-column>
           <el-table-column label="护理等级" width="120">
             <template #default="scope">
-              <!-- TODO: 待护理等级功能完成后显示 -->
               <span>-</span>
             </template>
           </el-table-column>
           <el-table-column label="入住期间" min-width="200">
             <template #default="scope">
-              <!-- TODO: 待入住管理功能完成后显示 -->
               <span>-</span>
             </template>
           </el-table-column>
@@ -669,10 +667,8 @@ async function deleteRoom(roomId) {
 }
 
 function viewRoomDetail(room) {
-  // TODO: 待护理等级和入住管理功能完成后启用
-  ElMessage.info('查看功能暂未开放，待护理等级和入住管理完成后启用')
-  // currentRoom.value = room
-  // roomDetailVisible.value = true
+  currentRoom.value = room
+  roomDetailVisible.value = true
 }
 
 // ==================== 床位操作 ====================

@@ -60,7 +60,10 @@ const routes = [
       {path:'/SmartBedMonitor',component:()=>import('@/views/SmartBedMonitor.vue')},
       {path:'/OrderManagement',component:()=>import('@/views/OrderManagement.vue')},
       {path:'/OrderDetail',component:()=>import('@/views/OrderDetail.vue')},
-      {path:'/RefundManagement',component:()=>import('@/views/RefundManagement.vue')}
+      {path:'/RefundManagement',component:()=>import('@/views/RefundManagement.vue')},
+      {path:'/BedNurseManage',component:()=>import('@/views/BedNurseManage.vue')},
+      {path:'/NursingTaskList',component:()=>import('@/views/NursingTaskList.vue')},
+      {path:'/NursingTaskList/NursingTaskDetail',component:()=>import('@/views/NursingTaskDetail.vue')}
     ]
   }
 ]

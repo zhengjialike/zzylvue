@@ -286,7 +286,7 @@ function canCancel(status) {
 }
 
 function canRefund(row) {
-  return row.transactionStatus === '已支付' && row.status !== 3 // 已支付且未完成可以退款
+  return row.status === 1 || row.status === 2
 }
 
 // ---------- 生命周期 ----------

@@ -138,6 +138,9 @@ import { Plus } from '@element-plus/icons-vue'
 const roomTypeDialogVisible = ref(false)
 const dialogTitle = ref('')
 
+// 当前用户
+const currentUser = ref(null)
+
 // 表单对象
 const roomTypeForm = reactive({
   id: '',
@@ -146,7 +149,7 @@ const roomTypeForm = reactive({
   status: 1,
   image: '',
   description: '',
-  createUser: '' // TODO: 从登录用户信息中获取
+  createUser: ''
 })
 
 // 当前请求URL（新增/编辑）
@@ -226,6 +229,28 @@ function handleImageSuccess(path) {
   roomTypeForm.image = path
 }
 
+// ---------- 检查是否有房间 ----------
+function hasRooms(row) {
+  let result = false
+  axios.get('/checkRoomTypeHasRooms?id=' + row.id).then(response => {
+    if (response.data.code === 200) {
+      result = response.data.hasRooms
+      row._hasRooms = result
+    }
+  })
+  return row._hasRooms || false
+}
+
+// ---------- 加载当前用户 ----------
+function loadCurrentUser() {
+  axios.get('/loadInfo').then(response => {
+    if (response.data) {
+      currentUser.value = response.data
+      roomTypeForm.createUser = response.data.uname || ''
+    }
+  })
+}
+
 // ---------- 保存 ----------
 function saveRoomType() {
   // 表单验证
@@ -244,6 +269,10 @@ function saveRoomType() {
   if (!roomTypeForm.description) {
     ElMessage.warning('请输入房型介绍')
     return
+  }
+
+  if (currentUser.value) {
+    roomTypeForm.createUser = currentUser.value.uname || ''
   }
 
   axios.post(url, roomTypeForm)
@@ -306,12 +335,6 @@ function delRoomType(id) {
   })
 }
 
-// ---------- 检查是否有房间（TODO：待房间管理完成后实现）----------
-function hasRooms(row) {
-  // TODO: 调用后端接口检查该房型下是否有房间
-  return false
-}
-
 // ---------- 切换状态 ----------
 function toggleStatus(row) {
   const newStatus = row.status === 1 ? 0 : 1
@@ -357,6 +380,7 @@ function formatDateTime(dateTimeStr) {
 // ---------- 生命周期 ----------
 onMounted(() => {
   loadRoomTypeList()
+  loadCurrentUser()
 })
 </script>
 
