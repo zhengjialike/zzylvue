@@ -10,6 +10,8 @@ const routes = [
   {
     path: '/MainIndex', name: 'MainIndex', component: MainIndex,
     children: [
+      // 工作台
+      { path: '/Workbench', name: 'Workbench', component: () => import('@/views/Workbench.vue') },
       { path: '/UserInfo', name: 'UserInfo', component: UserInfo },
       { path: '/ModifyPwd', name: 'ModifyPwd', component: ModifyPwd },
 

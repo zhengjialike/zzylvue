@@ -42,7 +42,6 @@ const menuList = ref([]);
 const realName = ref(null);
 
 onMounted(() => {
-  router.replace('/Workbench');
   axios.get("/sysMenus").then((response) => {
     if (response.data.code === 200) {
       menuList.value = response.data.data || [];
