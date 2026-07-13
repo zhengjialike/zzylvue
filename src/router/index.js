@@ -3,6 +3,7 @@ import HomeView from '../views/HomeView.vue'
 import MainIndex from '../views/MainIndex.vue'
 import UserInfo from '../views/UserInfo.vue'
 import ModifyPwd from '../views/ModifyPwd.vue'
+import Appointment from '../views/Appointment.vue'
 
 const routes = [
   {
@@ -44,6 +45,7 @@ const routes = [
       {path:'/NursingPlain',component:()=>import('@/views/NursingPlain.vue')},
       {path:'/NursingLevel',component:()=>import('@/views/NursingLevel.vue')},
       {path:'/Appointment',component:()=>import('@/views/Appointment.vue')},
+      { path: '/AppointmentRecord', component: () => import('@/views/AppointmentRecord.vue')},
       {path:'/VisitRecord',component:()=>import('@/views/VisitRecord.vue')},
       {path:'/Customer',component:()=>import('@/views/Customer.vue')},
       {path:'/RoomType',component:()=>import('@/views/RoomType.vue')},
@@ -63,8 +65,15 @@ const routes = [
       {path:'/RefundManagement',component:()=>import('@/views/RefundManagement.vue')},
       {path:'/BedNurseManage',component:()=>import('@/views/BedNurseManage.vue')},
       {path:'/NursingTaskList',component:()=>import('@/views/NursingTaskList.vue')},
-      {path:'/NursingTaskList/NursingTaskDetail',component:()=>import('@/views/NursingTaskDetail.vue')}
+      {path:'/NursingTaskList/NursingTaskDetail',component:()=>import('@/views/NursingTaskDetail.vue')},
+      { path: '/InoutRecord', component: () => import('@/views/InoutRecord.vue')},
+      { path: '/Psychology', component: () => import('@/views/Psychology.vue')}
     ]
+  },
+  {
+    path: '/Appointment',
+    name: 'Appointment',
+    component: Appointment
   }
 ]
 
