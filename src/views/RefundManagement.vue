@@ -56,8 +56,14 @@
           <el-tag :type="getRefundStatusType(scope.row.refundStatus)">{{ scope.row.refundStatusText }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="100" fixed="right">
+      <el-table-column label="操作" width="160" fixed="right">
         <template #default="scope">
+          <el-button
+            v-if="scope.row.refundStatus === 0"
+            link
+            type="success"
+            size="small"
+            @click="approveRefund(scope.row)">允许退款</el-button>
           <el-button link type="primary" size="small" @click="viewRefund(scope.row)">查看</el-button>
         </template>
       </el-table-column>
@@ -102,7 +108,7 @@
 <script setup>
 import { onMounted, ref, reactive } from 'vue'
 import axios from 'axios'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 // 搜索表单
 const searchForm = reactive({
@@ -197,6 +203,29 @@ function viewRefund(row) {
       console.error(error)
       ElMessage.error('网络错误')
     })
+}
+
+// ---------- 允许退款 ----------
+function approveRefund(row) {
+  ElMessageBox.confirm('确认对该订单执行退款操作？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
+    axios.post('/refund/approve', { refundId: row.id })
+      .then(response => {
+        if (response.data.code === 200) {
+          ElMessage.success('退款成功')
+          loadRefunds()
+        } else {
+          ElMessage.error(response.data.msg || '操作失败')
+        }
+      })
+      .catch(error => {
+        console.error(error)
+        ElMessage.error('网络错误')
+      })
+  }).catch(() => {})
 }
 
 // ---------- 工具函数 ----------

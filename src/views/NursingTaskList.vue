@@ -330,7 +330,7 @@ function confirmExecute() {
     executionTime: executeForm.executionTime,
     executionImage: executeForm.executionImage,
     executionRecord: executeForm.executionRecord,
-    executorId: currentUser.value ? currentUser.value.id : 1
+    executorId: 2
   })
     .then(response => {
       if (response.data.code === 200) {
@@ -363,7 +363,7 @@ function confirmCancel() {
   axios.post('/nursingTask/cancel', {
     taskId: currentTaskId.value,
     cancelReason: cancelForm.cancelReason,
-    cancelerId: currentUser.value ? currentUser.value.id : 1
+    cancelerId: 2
   })
     .then(response => {
       if (response.data.code === 200) {
