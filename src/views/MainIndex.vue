@@ -20,7 +20,7 @@
           router
         >
           <!-- 一级菜单循环 -->
-          <el-sub-menu v-for="m in menuList" :index="m.id" :key="m.id">
+          <el-sub-menu v-for="m in menuList" :index="String(m.id)" :key="m.id">
             <template #title>
               <span>{{ m.mname }}</span>
             </template>
@@ -36,7 +36,7 @@
               </el-menu-item>
 
               <!-- 情况2：二级节点有三级节点 -->
-              <el-sub-menu v-else :index="sub.id">
+              <el-sub-menu v-else :index="String(sub.id)">
                 <template #title>
                   <span>{{ sub.mname }}</span>
                 </template>
@@ -64,9 +64,13 @@
 <script setup>
 import { onMounted, ref } from "vue";
 import axios from "axios";
+import { ElMessage } from "element-plus";
+import { useRouter } from "vue-router";
 
 // 声明系统菜单节点集合
 const menuList = ref([]);
+const realName = ref("");
+const router = useRouter();
 
 // 页面挂载发送请求
 onMounted(() => {
@@ -74,27 +78,57 @@ onMounted(() => {
   axios
     .get("/sysMenus")
     .then((response) => {
-      console.log(response.data);
-      // 将响应的菜单集合数据赋值给 menuList
-      menuList.value = response.data;
+      if (response.data.code === 200) {
+        menuList.value = response.data.data || [];
+        return;
+      }
+      ElMessage.error(response.data.msg || "菜单加载失败");
     })
     .catch((error) => {
-      console.error(error);
+      handleRequestError(error, "菜单加载失败");
     });
-    loadLoginUserInfo();
+  loadLoginUserInfo();
 });
-// 声明用户登录信息
-const realName = ref(null);
 
 // 定义函数发送请求加载当前登录用户信息
 function loadLoginUserInfo() {
   axios.get('/loadInfo')
     .then(response => {
-      realName.value = response.data.uname; // 根据实际返回字段调整
+      if (response.data.code === 200) {
+        realName.value = response.data.data?.uname || "";
+        return;
+      }
+      handleUnauthorized(response.data);
     })
     .catch(error => {
-      console.error('加载用户信息失败:', error);
+      handleRequestError(error, "加载用户信息失败");
     });
+}
+
+function handleLogout() {
+  axios.get("/logout")
+    .finally(() => {
+      router.replace("/");
+    });
+}
+
+function handleUnauthorized(data) {
+  if (data?.code === 401) {
+    ElMessage.warning(data.msg || "登录状态已失效，请重新登录");
+    router.replace("/");
+    return;
+  }
+  ElMessage.error(data?.msg || "加载失败");
+}
+
+function handleRequestError(error, fallbackMessage) {
+  const data = error.response?.data;
+  if (data?.code === 401) {
+    handleUnauthorized(data);
+    return;
+  }
+  console.error(fallbackMessage, error);
+  ElMessage.error(data?.msg || fallbackMessage);
 }
 </script>
 

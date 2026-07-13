@@ -15,21 +15,28 @@
       <el-button type="primary" @click="startApply">发起退住申请</el-button>
     </div>
 
-    <el-table :data="tableData" style="width: 100%" fit>
-      <el-table-column type="index" label="序号" width="60" />
-      <el-table-column prop="billNo" label="单据编号" width="200" />
-      <el-table-column prop="elderName" label="老人姓名" width="100" />
-      <el-table-column prop="idCard" label="身份证号" width="180" />
-      <el-table-column prop="applicant" label="创建人" width="100" />
-      <el-table-column prop="createTime" label="创建时间" width="170" />
-      <el-table-column prop="checkOutDate" label="退住日期" width="120" />
-      <el-table-column label="状态" width="100">
+    <el-table
+      :data="tableData"
+      class="business-table"
+      style="width: 100%"
+      table-layout="fixed"
+      :header-cell-style="{ textAlign: 'center' }"
+      :cell-style="{ textAlign: 'center' }"
+    >
+      <el-table-column type="index" label="序号" width="55" align="center" />
+      <el-table-column prop="billNo" label="单据编号" min-width="130" align="center" show-overflow-tooltip />
+      <el-table-column prop="elderName" label="老人姓名" min-width="80" align="center" show-overflow-tooltip />
+      <el-table-column prop="idCard" label="身份证号" min-width="145" align="center" show-overflow-tooltip />
+      <el-table-column prop="applicant" label="创建人" min-width="80" align="center" show-overflow-tooltip />
+      <el-table-column prop="createTime" label="创建时间" min-width="125" align="center" show-overflow-tooltip />
+      <el-table-column prop="checkOutDate" label="退住日期" min-width="90" align="center" show-overflow-tooltip />
+      <el-table-column label="状态" min-width="80" align="center">
         <template #default="scope">
           <el-tag :type="statusType(scope.row.flowStatus)">{{ scope.row.flowStatus }}</el-tag>
           <div style="font-size: 12px; color: #999">步骤{{ scope.row.currentStep }}/7</div>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="120">
+      <el-table-column label="操作" width="80" align="center">
         <template #default="scope">
           <el-button type="primary" size="small" @click="viewDetail(scope.row)">查看</el-button>
         </template>
@@ -46,8 +53,10 @@ import { useRouter } from 'vue-router'
 import axios from 'axios'
 
 const router = useRouter()
+// 查询模型与 CheckOutPageDto 对齐；pageNum 在翻页时由 v-model 自动更新。
 const condForm = reactive({ billNo: '', elderName: '', idCard: '', startDate: '', endDate: '', pageNum: 1, pageSize: 10 })
 const dateRange = ref(null)
+// 分页接口返回 { list, total }，分别驱动表格和分页器。
 const tableData = ref([])
 const total = ref(0)
 
@@ -67,6 +76,7 @@ function loadList() {
 }
 
 function resetCond() {
+  // 日期范围有两套状态：控件数组和请求字段，重置时必须一起清空。
   condForm.billNo = ''; condForm.elderName = ''; condForm.idCard = ''
   dateRange.value = null; condForm.startDate = ''; condForm.endDate = ''
   condForm.pageNum = 1; loadList()
@@ -83,6 +93,7 @@ function viewDetail(row) {
 }
 
 function statusType(s) {
+  // 流程状态颜色不参与业务判断，只帮助用户快速区分完成、关闭和办理中单据。
   if (s === '已完成') return 'success'
   if (s === '已关闭') return 'info'
   return 'warning'
@@ -90,3 +101,13 @@ function statusType(s) {
 
 onMounted(() => loadList())
 </script>
+
+<style scoped>
+.business-table {
+  margin-bottom: 14px;
+}
+
+.business-table :deep(.el-table__cell .cell) {
+  padding: 0 6px;
+}
+</style>

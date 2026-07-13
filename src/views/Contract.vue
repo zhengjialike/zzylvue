@@ -29,21 +29,28 @@
     </div>
 
     <!-- 列表 -->
-    <el-table :data="tableData" style="width: 100%" fit>
-      <el-table-column type="index" label="序号" width="60" />
-      <el-table-column prop="contractNo" label="合同编号" width="200" />
-      <el-table-column prop="contractName" label="合同名称" width="180" />
-      <el-table-column prop="elderName" label="老人姓名" width="100" />
-      <el-table-column prop="idCard" label="老人身份证号" width="180" />
-      <el-table-column prop="creator" label="创建人" width="100" />
-      <el-table-column prop="createTime" label="创建时间" width="170" />
-      <el-table-column label="合同期限" width="220">
+    <el-table
+      :data="tableData"
+      class="business-table"
+      style="width: 100%"
+      table-layout="fixed"
+      :header-cell-style="{ textAlign: 'center' }"
+      :cell-style="{ textAlign: 'center' }"
+    >
+      <el-table-column type="index" label="序号" width="55" align="center" />
+      <el-table-column prop="contractNo" label="合同编号" min-width="120" align="center" show-overflow-tooltip />
+      <el-table-column prop="contractName" label="合同名称" min-width="110" align="center" show-overflow-tooltip />
+      <el-table-column prop="elderName" label="老人姓名" min-width="75" align="center" show-overflow-tooltip />
+      <el-table-column prop="idCard" label="老人身份证号" min-width="135" align="center" show-overflow-tooltip />
+      <el-table-column prop="creator" label="创建人" min-width="70" align="center" show-overflow-tooltip />
+      <el-table-column prop="createTime" label="创建时间" min-width="120" align="center" show-overflow-tooltip />
+      <el-table-column label="合同期限" min-width="125" align="center">
         <template #default="scope">
           {{ scope.row.startDate }} ~ {{ scope.row.endDate }}
         </template>
       </el-table-column>
-      <el-table-column prop="status" label="合同状态" width="100" />
-      <el-table-column label="操作" width="100">
+      <el-table-column prop="status" label="合同状态" min-width="75" align="center" />
+      <el-table-column label="操作" width="80" align="center">
         <template #default="scope">
           <el-button type="primary" size="small" @click="viewDetail(scope.row)">查看</el-button>
         </template>
@@ -102,10 +109,12 @@ const condForm = reactive({
   pageNum: 1,
   pageSize: 10
 })
+// Element Plus 日期范围控件使用数组，后端 DTO 使用两个 LocalDate 字段，因此不能直接复用同一属性。
 const dateRange = ref(null)
 const tableData = ref([])
 const total = ref(0)
 
+// 合同详情不是简单复用列表行：后端还会聚合入住签约资料和退住解除资料。
 const detailDialogVisible = ref(false)
 const detail = ref({})
 
@@ -125,6 +134,7 @@ function loadList() {
 }
 
 function resetCond() {
+  // 将页码恢复到第一页，避免在较大页码上重查后出现空表格。
   condForm.contractNo = ''
   condForm.elderName = ''
   condForm.status = ''
@@ -136,7 +146,7 @@ function resetCond() {
 }
 
 function viewDetail(row) {
-  // 当前详情直接使用列表行数据展示；如后续字段增多可改为调用/contractDetail。
+  // 列表只包含合同主表字段；详情接口会额外返回合同文件、丙方信息和已失效合同的解除协议。
   axios.post('/contractDetail', { id: row.id }).then(res => {
     detail.value = res.data || {}
     detailDialogVisible.value = true
@@ -147,3 +157,13 @@ onMounted(() => {
   loadList()
 })
 </script>
+
+<style scoped>
+.business-table {
+  margin-bottom: 14px;
+}
+
+.business-table :deep(.el-table__cell .cell) {
+  padding: 0 6px;
+}
+</style>
