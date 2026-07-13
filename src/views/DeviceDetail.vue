@@ -161,8 +161,12 @@ function loadFunctionModules(productId) {
 }
 
 // ---------- 加载报警记录 ----------
-function loadAlertRecords(deviceId) {
-  axios.get('/getDeviceAlertRecords', { params: { deviceId } })
+function loadAlertRecords(deviceId, functionName) {
+  const params = { deviceId }
+  if (functionName) {
+    params.functionName = functionName
+  }
+  axios.get('/getDeviceAlertRecords', { params })
     .then(response => {
       if (response.data.code === 200) {
         eventList.value = response.data.data || []
@@ -172,6 +176,15 @@ function loadAlertRecords(deviceId) {
       console.error(error)
     })
 }
+
+// 监听功能模块 tab 切换
+import { watch } from 'vue'
+watch(activeModule, (newVal) => {
+  const deviceId = route.query.id
+  if (deviceId) {
+    loadAlertRecords(deviceId, newVal)
+  }
+})
 
 // ---------- 返回 ----------
 function goBack() {
