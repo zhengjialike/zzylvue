@@ -117,9 +117,9 @@ const deviceForm = reactive({
   deviceName: '',
   remarkName: '',
   productId: null,
-  locationType: 3, // 默认老人
+  locationType: 3,
   locationId: null,
-  status: 0
+  status: null
 })
 
 // 当前请求URL
@@ -246,7 +246,7 @@ function cleanDeviceForm() {
   deviceForm.productId = null
   deviceForm.locationType = 3
   deviceForm.locationId = null
-  deviceForm.status = 0
+  deviceForm.status = null
   selectedLocation.value = []
 }
 
