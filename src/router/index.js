@@ -18,6 +18,10 @@ const routes = [
       { path: '/NursingPlain', component: () => import('@/views/NursingPlain.vue') },
       { path: '/NursingLevel', component: () => import('@/views/NursingLevel.vue') },
 
+      // 护理任务
+      { path: '/BedNurseManage', component: () => import('@/views/BedNurseManage.vue') },
+      { path: '/NursingTaskList', component: () => import('@/views/NursingTaskList.vue') },
+
       // 入退管理
       { path: '/CheckIn', component: () => import('@/views/CheckIn.vue') },
       { path: '/CheckInDetail', component: () => import('@/views/CheckInDetail.vue') },
