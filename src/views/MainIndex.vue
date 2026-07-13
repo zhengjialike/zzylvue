@@ -12,16 +12,19 @@
     <el-container class="body-wrapper">
       <el-aside class="el-aside">
         <el-menu active-text-color="#ffd04b" background-color="#545c64" text-color="#fff" router>
-          <el-sub-menu v-for="m in menuList" :index="m.id" :key="m.id">
-            <template #title><span>{{ m.mname }}</span></template>
-            <template v-for="sub in m.subItems" :key="sub.id">
-              <el-menu-item v-if="sub.subItems.length === 0" :index="sub.path">{{ sub.mname }}</el-menu-item>
-              <el-sub-menu v-else :index="sub.id">
-                <template #title><span>{{ sub.mname }}</span></template>
-                <el-menu-item v-for="subChild in sub.subItems" :index="subChild.path" :key="subChild.id">{{ subChild.mname }}</el-menu-item>
-              </el-sub-menu>
-            </template>
-          </el-sub-menu>
+          <template v-for="m in menuList" :key="m.id">
+            <el-menu-item v-if="!m.subItems || m.subItems.length === 0" :index="m.path || '/Workbench'">{{ m.mname }}</el-menu-item>
+            <el-sub-menu v-else :index="m.id">
+              <template #title><span>{{ m.mname }}</span></template>
+              <template v-for="sub in m.subItems" :key="sub.id">
+                <el-menu-item v-if="!sub.subItems || sub.subItems.length === 0" :index="sub.path">{{ sub.mname }}</el-menu-item>
+                <el-sub-menu v-else :index="sub.id">
+                  <template #title><span>{{ sub.mname }}</span></template>
+                  <el-menu-item v-for="subChild in sub.subItems" :index="subChild.path" :key="subChild.id">{{ subChild.mname }}</el-menu-item>
+                </el-sub-menu>
+              </template>
+            </el-sub-menu>
+          </template>
         </el-menu>
       </el-aside>
       <el-main class="el-main"><router-view /></el-main>
@@ -39,6 +42,7 @@ const menuList = ref([]);
 const realName = ref(null);
 
 onMounted(() => {
+  router.replace('/Workbench');
   axios.get("/sysMenus").then((response) => {
     if (response.data.code === 200) {
       menuList.value = response.data.data || [];
