@@ -12,42 +12,46 @@
 
     <!-- 房间列表 - 添加 :key 强制重新渲染 -->
     <div class="room-list" :key="'floor-' + activeFloor + '-' + refreshKey">
-      <div v-for="room in roomList" :key="room.id" class="room-item">
-        <div class="room-header">
-          <span class="room-number">房间号：{{ room.roomNumber }}</span>
-          <el-button type="primary" size="small" @click="batchSetNurses(room.id)">
-            批量设置护理员
-          </el-button>
-        </div>
+      <template v-for="room in roomList" :key="room.id">
+        <div v-if="room.beds && room.beds.some(b => b.elderlyName)" class="room-item">
+          <div class="room-header">
+            <span class="room-number">房间号：{{ room.roomNumber }}</span>
+            <el-button type="primary" size="small" @click="batchSetNurses(room.id)">
+              批量设置护理员
+            </el-button>
+          </div>
 
-        <div class="bed-grid">
-          <div v-for="bed in room.beds" :key="bed.id" class="bed-item">
-            <div class="bed-info">
-              <div class="bed-number">床位号：{{ bed.bedNumber }}</div>
-              <el-button type="text" size="small" @click="setNurse(bed.id)">
-                设置护理员
-              </el-button>
-            </div>
-            <div class="elderly-info">
-              <span>老人姓名：{{ bed.elderlyName || '-' }}</span>
-            </div>
-            <div class="nurse-info">
-              <span>护理员姓名：</span>
-              <el-tag
-                v-for="nurse in bed.nurses"
-                :key="nurse.id"
-                size="small"
-                style="margin-right: 5px;"
-              >
-                {{ nurse.realname }}
-              </el-tag>
-              <span v-if="!bed.nurses || bed.nurses.length === 0" style="color: #999;">
-                当前床位没有安排护理员
-              </span>
-            </div>
+          <div class="bed-grid">
+            <template v-for="bed in room.beds" :key="bed.id">
+              <div v-if="bed.elderlyName" class="bed-item">
+                <div class="bed-info">
+                  <div class="bed-number">床位号：{{ bed.bedNumber }}</div>
+                  <el-button type="text" size="small" @click="setNurse(bed.id)">
+                    设置护理员
+                  </el-button>
+                </div>
+                <div class="elderly-info">
+                  <span>老人姓名：{{ bed.elderlyName }}</span>
+                </div>
+                <div class="nurse-info">
+                  <span>护理员姓名：</span>
+                  <el-tag
+                    v-for="nurse in bed.nurses"
+                    :key="nurse.id"
+                    size="small"
+                    style="margin-right: 5px;"
+                  >
+                    {{ nurse.realname }}
+                  </el-tag>
+                  <span v-if="!bed.nurses || bed.nurses.length === 0" style="color: #999;">
+                    当前床位没有安排护理员
+                  </span>
+                </div>
+              </div>
+            </template>
           </div>
         </div>
-      </div>
+      </template>
 
       <!-- 如果没有房间，显示提示 -->
       <div v-if="roomList.length === 0 && !loading" class="empty-tip">
