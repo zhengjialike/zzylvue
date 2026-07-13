@@ -156,8 +156,8 @@
                     <div class="bill-line">
                       <span>账单编号: {{ b.billNo }}</span>
                       <span>账单月份: {{ b.billMonth }}</span>
-                      <span>应付金额: {{ b.payableAmount }}</span>
-                      <span>可退金额: {{ b.refundableAmount }}</span>
+                      <span>应付金额: {{ b.payableAmount ?? 0 }}</span>
+                      <span>可退金额: {{ b.refundableAmount ?? 0 }}</span>
                     </div>
                     <el-form-item label="实退金额" label-width="90px">
                       <el-input-number v-model="b.actualRefund" :min="0" :max="b.refundableAmount" />
@@ -169,12 +169,13 @@
                 </div>
                 <div class="bill-section">
                   <div class="section-title">费用账单</div>
+                  <el-empty v-if="!form.bills.shouldRefundFee || form.bills.shouldRefundFee.length === 0" description="暂无费用账单" :image-size="60" />
                   <div v-for="(b, i) in form.bills.shouldRefundFee" :key="'srf-'+i" class="bill-row">
                     <div class="bill-line">
                       <span>账单编号: {{ b.billNo }}</span>
                       <span>护理项目名称: {{ b.nursingItemName }}</span>
-                      <span>应付金额: {{ b.payableAmount }}</span>
-                      <span>可退金额: {{ b.refundableAmount }}</span>
+                      <span>应付金额: {{ b.payableAmount ?? 0 }}</span>
+                      <span>可退金额: {{ b.refundableAmount ?? 0 }}</span>
                     </div>
                     <el-form-item label="实退金额" label-width="90px">
                       <el-input-number v-model="b.actualRefund" :min="0" :max="b.refundableAmount" />
@@ -189,11 +190,12 @@
               <!-- 欠费卡片 -->
               <el-card shadow="never" class="bill-card">
                 <template #header><span class="card-title">欠费</span></template>
+                <el-empty v-if="!form.bills.arrears || form.bills.arrears.length === 0" description="暂无欠费" :image-size="60" />
                 <div v-for="(b, i) in form.bills.arrears" :key="'ar-'+i" class="bill-row">
                   <div class="bill-line">
                     <span>账单编号: {{ b.billNo }}</span>
                     <span>账单月份: {{ b.billMonth }}</span>
-                    <span>应付金额: {{ b.payableAmount }}</span>
+                    <span>应付金额: {{ b.payableAmount ?? 0 }}</span>
                   </div>
                 </div>
               </el-card>
@@ -217,11 +219,12 @@
               <!-- 未缴卡片 -->
               <el-card shadow="never" class="bill-card">
                 <template #header><span class="card-title">未缴</span></template>
+                <el-empty v-if="!form.bills.unpaid || form.bills.unpaid.length === 0" description="暂无未缴账单" :image-size="60" />
                 <div v-for="(b, i) in form.bills.unpaid" :key="'up-'+i" class="bill-row">
                   <div class="bill-line">
                     <span>账单编号: {{ b.billNo }}</span>
                     <span>护理项目名称: {{ b.nursingItemName }}</span>
-                    <span>应付金额: {{ b.payableAmount }}</span>
+                    <span>应付金额: {{ b.payableAmount ?? 0 }}</span>
                   </div>
                 </div>
               </el-card>
