@@ -102,10 +102,12 @@ const condForm = reactive({
   pageNum: 1,
   pageSize: 10
 })
+// Element Plus 日期范围控件使用数组，后端 DTO 使用两个 LocalDate 字段，因此不能直接复用同一属性。
 const dateRange = ref(null)
 const tableData = ref([])
 const total = ref(0)
 
+// 合同详情不是简单复用列表行：后端还会聚合入住签约资料和退住解除资料。
 const detailDialogVisible = ref(false)
 const detail = ref({})
 
@@ -125,6 +127,7 @@ function loadList() {
 }
 
 function resetCond() {
+  // 将页码恢复到第一页，避免在较大页码上重查后出现空表格。
   condForm.contractNo = ''
   condForm.elderName = ''
   condForm.status = ''
@@ -136,7 +139,7 @@ function resetCond() {
 }
 
 function viewDetail(row) {
-  // 当前详情直接使用列表行数据展示；如后续字段增多可改为调用/contractDetail。
+  // 列表只包含合同主表字段；详情接口会额外返回合同文件、丙方信息和已失效合同的解除协议。
   axios.post('/contractDetail', { id: row.id }).then(res => {
     detail.value = res.data || {}
     detailDialogVisible.value = true

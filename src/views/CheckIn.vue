@@ -47,8 +47,10 @@ import { useRouter } from 'vue-router'
 import axios from 'axios'
 
 const router = useRouter()
+// 列表查询参数与后端 CheckInPageDto 一一对应；日期选择器的数组在 loadList 中拆成起止日期。
 const condForm = reactive({ billNo: '', elderName: '', idCard: '', startDate: '', endDate: '', pageNum: 1, pageSize: 10 })
 const dateRange = ref(null)
+// tableData 保存当前页记录，total 保存符合条件的总记录数，供 Element Plus 分页组件使用。
 const tableData = ref([])
 const total = ref(0)
 
@@ -68,6 +70,7 @@ function loadList() {
 }
 
 function resetCond() {
+  // 重置时同时清空展示用 dateRange 和真正提交给后端的 startDate/endDate，避免旧日期残留。
   condForm.billNo = ''; condForm.elderName = ''; condForm.idCard = ''
   dateRange.value = null; condForm.startDate = ''; condForm.endDate = ''
   condForm.pageNum = 1; loadList()
@@ -84,6 +87,7 @@ function viewDetail(row) {
 }
 
 function statusType(s) {
+  // 颜色仅用于视觉提示，真正能否继续办理仍由详情页和后端 flowStatus/currentStep 判断。
   if (s === '已完成') return 'success'
   if (s === '已关闭') return 'info'
   return 'warning'

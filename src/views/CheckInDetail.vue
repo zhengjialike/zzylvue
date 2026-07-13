@@ -437,7 +437,8 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Minus } from '@element-plus/icons-vue'
 import { EVAL_QUESTIONS, judgeLevel, DISEASES } from './evalQuestions'
 
-// JSON字符串→数组,已经是数组直接返回,空返回默认值
+// 入住详情中的疾病、用药、评估答案等以 JSON 字符串落库，页面编辑时需要统一还原为数组。
+// 兼容接口直接返回数组的情况；解析失败时使用默认值，避免旧数据导致整个详情页渲染中断。
 function parseArr(v, def) {
   if (Array.isArray(v)) return v
   if (typeof v === 'string' && v.trim()) {
@@ -449,7 +450,9 @@ function parseArr(v, def) {
 const route = useRoute()
 const router = useRouter()
 
+// 路由带 id 表示查看/继续办理已有入住单；没有 id 表示发起新的入住申请。
 const id = ref(route.query.id ? Number(route.query.id) : null)
+// activeStep 必须以后端 currentStep 为准，它决定当前显示的表单区域和可提交节点。
 const activeStep = ref(1)
 const detail = ref({})
 const logs = ref([])
@@ -464,7 +467,7 @@ const submitting = ref(false)
 // 撤销请求单独加锁，防止重复点击产生多次撤销日志或并发释放床位。
 const revoking = ref(false)
 
-// 静态选项
+// 静态业务字典。当前项目未单独建设字典接口，因此集中放在页面脚本中供各表单控件复用。
 const nationOptions = ['汉族', '回族', '满族', '其他']
 const politicalOptions = ['群众', '中共党员', '中共预备党员', '其他民主党派', '无党派人士']
 const religionOptions = ['佛教', '道教', '基督教', '天主教', '伊斯兰教', '其他']
@@ -490,6 +493,7 @@ const levelChangeOptions = ['已诊断疾病超过3项', '风险事件超过3次
 const finalLevelOptions = ['能力完好', '轻度失能', '中度失能', '中重度失能', '重度失能']
 
 const form = reactive({
+  // form 是五个步骤共享的页面模型；查看详情时 fillForm 会把数据库字段转换回这些页面字段。
   // 步骤1 基本信息
   elderName: '', idCard: '', gender: '', birthday: '', age: '', address: '', phone: '',
   nation: '', politicalStatus: '', religion: '', maritalStatus: '', education: '',
@@ -516,7 +520,7 @@ const form = reactive({
   thirdPartyName: '', thirdPartyPhone: '', contractFile: ''
 })
 
-// 计算评估得分
+// 能力评估题目的选项值是从 0 开始的下标，实际得分由题目 score 数组映射后累加。
 const totalScore = computed(() => {
   let total = 0
   EVAL_QUESTIONS.forEach(q => {
@@ -528,6 +532,7 @@ const totalScore = computed(() => {
   return total
 })
 const selfScore = computed(() => {
+  // 第 1～10 题属于日常生活活动维度。
   let s = 0; [1, 2, 3, 9].forEach(qid => {
     const idx = form.evalAnswers[qid]
     if (idx !== undefined && idx !== null && idx !== '') s += EVAL_QUESTIONS.find(q => q.id === qid).options[idx].score
@@ -535,10 +540,12 @@ const selfScore = computed(() => {
   return s
 })
 const mentalScore = computed(() => {
+  // 第 11～14 题属于精神状态维度。
   const idx = form.evalAnswers[6]
   return idx !== undefined && idx !== null && idx !== '' ? EVAL_QUESTIONS.find(q => q.id === 6).options[idx].score : 0
 })
 const socialScore = computed(() => {
+  // 第 15～18 题在本页面合并为感知觉与社会参与维度。
   let s = 0; [4, 5, 7, 8, 10].forEach(qid => {
     const idx = form.evalAnswers[qid]
     if (idx !== undefined && idx !== null && idx !== '') s += EVAL_QUESTIONS.find(q => q.id === qid).options[idx].score
@@ -547,11 +554,13 @@ const socialScore = computed(() => {
 })
 
 const contractTermText = computed(() => {
+  // 合同期限直接沿用入住配置期限，签约步骤只负责确认合同资料，不重复选择日期。
   if (form.checkInTerm && form.checkInTerm.length === 2) return form.checkInTerm[0] + ' ~ ' + form.checkInTerm[1]
   return detail.value.checkInTermStart ? (detail.value.checkInTermStart + ' ~ ' + detail.value.checkInTermEnd) : ''
 })
 
 const billPreviewData = computed(() => [
+  // 账单预览展示费用构成；医保支付和政府补贴作为抵扣项使用负数显示。
   { item: '护理费用', amount: form.nursingFee },
   { item: '床位费用', amount: form.bedFee },
   { item: '其他费用', amount: form.otherFee },
@@ -559,6 +568,7 @@ const billPreviewData = computed(() => [
   { item: '政府补贴', amount: form.govSubsidy }
 ])
 const billTotal = computed(() => {
+  // 费用合计 = 押金 + 护理费 + 床位费 + 其他费用 - 医保支付 - 政府补贴。
   const gross = form.nursingFee + form.bedFee + form.otherFee
   return (gross - form.medicalPay - form.govSubsidy).toFixed(2)
 })
@@ -570,6 +580,8 @@ const submitBtnText = computed(() => {
 })
 
 function parseIdCard() {
+  // 仅处理常见 18 位身份证：提取出生日期和性别，并按当前日期估算周岁。
+  // 后端仍会根据身份证号识别老人档案，前端自动回填只是减少录入工作量。
   const v = form.idCard
   if (!v || v.length !== 18) return
   const genderCode = parseInt(v.charAt(16), 10)
@@ -591,6 +603,7 @@ const idCardPattern = /^\d{17}[\dXx]$/
 
 // 通用必填校验。传入字段显示名称和值，找到第一个空值后立即给出明确提示。
 function requireFields(fields) {
+  // 通用必填校验返回布尔值，让每个步骤可以组合自己的最小必填字段集合。
   const missing = fields.find(({ value }) => value === '' || value == null || (Array.isArray(value) && value.length === 0))
   if (!missing) return true
   ElMessage.warning(`请填写${missing.label}`)
@@ -599,6 +612,7 @@ function requireFields(fields) {
 
 // 按入住流程当前步骤执行不同校验，并在校验失败时自动切换到对应页签。
 function validateCurrentStep() {
+  // 前端校验用于即时提示；后端 submitStep 还会校验当前节点和关键业务条件，不能只依赖这里。
   if (activeStep.value === 1) {
     if (!requireFields([{ label: '老人姓名', value: form.elderName }, { label: '老人身份证号', value: form.idCard }, { label: '家庭住址', value: form.address }, { label: '联系方式', value: form.phone }])) { step1Tab.value = 'base'; return false }
     if (!idCardPattern.test(form.idCard)) { step1Tab.value = 'base'; ElMessage.warning('身份证号格式错误，请重新输入'); return false }
@@ -646,6 +660,7 @@ function removeMedication(idx) { form.medications.splice(idx, 1) }
 function calcEvalScore() { /* 触发computed重新计算，空函数即可 */ }
 
 function beforeImg(file) {
+  // 证件照和身份证附件只允许常见图片格式，并在上传前限制体积。
   const isImg = ['image/png', 'image/jpg', 'image/jpeg'].includes(file.type)
   const isLt2M = file.size / 1024 / 1024 <= 2
   if (!isImg) { ElMessage.error('仅支持 PNG/JPG/JPEG 格式'); return false }
@@ -653,6 +668,7 @@ function beforeImg(file) {
   return true
 }
 function beforePdf(file) {
+  // 体检报告、合同等正式材料使用 PDF，浏览器端先拦截错误格式和超大文件。
   if (file.type !== 'application/pdf') { ElMessage.error('仅支持PDF格式'); return false }
   if (file.size / 1024 / 1024 > 60) { ElMessage.error('PDF文件大小不能超过60M'); return false }
   return true
@@ -660,6 +676,7 @@ function beforePdf(file) {
 
 // 空闲床位来自后端 t_bed，提交时后端还会二次校验，防止多人同时选择同一床位。
 async function loadAvailableBeds() {
+  // 床位列表由后端过滤，只展示未绑定老人或状态为空闲的床位。
   bedLoading.value = true
   try {
     const { data } = await axios.get('/checkInAvailableBeds')
@@ -672,11 +689,13 @@ async function loadAvailableBeds() {
 }
 
 function selectBed(bed) {
+  // 页面保存床位编号；提交配置步骤后，后端会再次查询床位并处理占用关系。
   form.bedNo = bed.bedNumber
   bedDialogVisible.value = false
 }
 
 function uploadSuccess(res, field) {
+  // 上传接口现阶段可能返回 URL 字符串，也兼容统一响应对象中的 data/url 字段。
   const path = (res && (res.data || res)) || ''
   const url = typeof path === 'string' ? path : (path.url || '')
   // 上传接口以 error: 开头表示本地或 OSS 保存失败，不能再把它当作有效文件地址。
@@ -690,6 +709,7 @@ function uploadSuccess(res, field) {
 }
 
 function loadDetail() {
+  // 新申请没有 id，无需请求详情；已有申请同时恢复主表、家属信息和流程日志。
   // 新建申请没有ID，只展示第1步；已有申请同时加载主表、家属和操作日志。
   if (!id.value) { activeStep.value = 1; detail.value = {}; return }
   axios.post('/checkInDetail', { id: id.value }).then(res => {
@@ -706,6 +726,7 @@ function loadDetail() {
 }
 
 function fillForm() {
+  // 将后端实体字段转换为页面字段。这里包含字段别名、JSON 反序列化和日期范围组装。
   const d = detail.value
   Object.assign(form, {
     elderName: d.elderName || '', idCard: d.idCard || '', gender: d.sex || d.gender || '',
@@ -764,6 +785,7 @@ function submitStep() {
 }
 
 function doSubmit() {
+  // 第二至第五步共用此提交入口，step 告诉后端本次允许修改哪一组业务数据。
   const payload = { ...form, id: id.value, step: activeStep.value }
   // 以下字段在页面模型和后端DTO中的名称不同，提交前必须显式转换。
   // 风险事件：页面使用更短的名称，后端和数据库使用完整业务名称。

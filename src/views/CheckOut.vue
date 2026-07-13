@@ -46,8 +46,10 @@ import { useRouter } from 'vue-router'
 import axios from 'axios'
 
 const router = useRouter()
+// 查询模型与 CheckOutPageDto 对齐；pageNum 在翻页时由 v-model 自动更新。
 const condForm = reactive({ billNo: '', elderName: '', idCard: '', startDate: '', endDate: '', pageNum: 1, pageSize: 10 })
 const dateRange = ref(null)
+// 分页接口返回 { list, total }，分别驱动表格和分页器。
 const tableData = ref([])
 const total = ref(0)
 
@@ -67,6 +69,7 @@ function loadList() {
 }
 
 function resetCond() {
+  // 日期范围有两套状态：控件数组和请求字段，重置时必须一起清空。
   condForm.billNo = ''; condForm.elderName = ''; condForm.idCard = ''
   dateRange.value = null; condForm.startDate = ''; condForm.endDate = ''
   condForm.pageNum = 1; loadList()
@@ -83,6 +86,7 @@ function viewDetail(row) {
 }
 
 function statusType(s) {
+  // 流程状态颜色不参与业务判断，只帮助用户快速区分完成、关闭和办理中单据。
   if (s === '已完成') return 'success'
   if (s === '已关闭') return 'info'
   return 'warning'

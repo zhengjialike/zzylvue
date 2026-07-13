@@ -375,8 +375,10 @@ import axios from 'axios'
 
 const route = useRoute()
 const router = useRouter()
+// 有 id 时继续办理既有退住流程；无 id 时从“申请退住”步骤创建新单。
 const id = route.query.id
 
+// currentStep 是七步流程的唯一页面状态源，加载详情和提交成功后都由后端返回值更新。
 const currentStep = ref(1)
 const stepTitle = ref('申请退住')
 const depositMax = ref(0)
@@ -394,6 +396,7 @@ const contractLoading = ref(false)
 const activeContracts = ref([])
 
 const form = reactive({
+  // 主表字段、详情展示字段和账单分类统一放在一个响应式模型中，便于七个步骤连续复用。
   id: id || null,
   elderId: null,
   elderName: '',
@@ -440,6 +443,7 @@ const form = reactive({
 })
 
 const stepTitles = {
+  // 键值必须与后端 STEP_NAMES 的 1～7 顺序保持一致。
   1: '申请退住',
   2: '申请审批',
   3: '解除合同',
@@ -456,10 +460,13 @@ const submitBtnText = computed(() => {
 })
 
 const hasArrears = computed(() => {
+  // 该值控制欠费提示；最终是否允许清算仍以后端实时查询未缴账单的结果为准。
   return form.bills.arrears && form.bills.arrears.length > 0
 })
 
 const finalRefundAmount = computed(() => {
+  // 最终应退 = 可退账单 + 可退费用 - 欠费 + 押金余额 + 预存余额。
+  // 每项都提供空数组/零值兜底，避免旧单据缺少某个分类时出现 NaN。
   const sr = (form.bills.shouldRefund || []).reduce((s, b) => s + (b.actualRefund || 0), 0)
   const srf = (form.bills.shouldRefundFee || []).reduce((s, b) => s + (b.actualRefund || 0), 0)
   const should = sr + srf
@@ -618,6 +625,7 @@ const loadDetail = async () => {
 }
 
 const loadBills = async () => {
+  // BillService 按业务含义对账单分组，页面保留 all 用于调整提交，其他数组用于分类展示和合计。
   if (!id) return
   try {
     const { data } = await axios.post('/checkOutBills', { id })
@@ -639,6 +647,7 @@ const loadBills = async () => {
 }
 
 const loadLogs = async () => {
+  // 日志加载失败不阻断主流程办理，因此这里只记录错误，不清空已经加载的业务详情。
   if (!id) return
   try {
     const { data } = await axios.post('/checkOutLogs', { id })
