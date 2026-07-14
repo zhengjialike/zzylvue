@@ -67,6 +67,10 @@ const routes = [
       // ===== 消息中心 =====
       { path: '/messageCenter', component: () => import('@/views/message/MessageCenter.vue') },
 
+      // ===== AI 助手 =====
+      { path: '/Psychology', component: () => import('@/views/Psychology.vue') },
+      { path: '/PsychologyRecord', component: () => import('@/views/PsychologyRecord.vue') },
+
       // ===== 请假管理 =====
       { path: '/leaveManagement', component: () => import('@/views/leave/LeaveManagement.vue') },
       { path: '/leaveDetail', component: () => import('@/views/leave/LeaveDetail.vue') },
